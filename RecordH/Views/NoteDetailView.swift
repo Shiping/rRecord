@@ -41,6 +41,7 @@ struct NoteDetailView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
         .background(Theme.background)
