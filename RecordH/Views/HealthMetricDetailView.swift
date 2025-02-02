@@ -15,7 +15,7 @@ struct HealthMetricDetailView: View {
     var body: some View {
         List {
             // Chart Section
-            ChartSection(records: records, type: type)
+            ChartSection(records: records, type: type, healthStore: healthStore)
                 .frame(height: 200)
                 .listRowBackground(Theme.cardBackground)
                 .listRowInsets(EdgeInsets())
@@ -23,7 +23,7 @@ struct HealthMetricDetailView: View {
             
             // Records List
             ForEach(records) { record in
-                RecordRow(record: record, type: type)
+                RecordRow(record: record, type: type, healthStore: healthStore)
                     .listRowBackground(Theme.cardBackground)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
@@ -69,37 +69,178 @@ struct HealthMetricDetailView: View {
 struct ChartSection: View {
     let records: [HealthRecord]
     let type: HealthRecord.RecordType
+    @ObservedObject var healthStore: HealthStore
+    
+    private var chartYDomain: ClosedRange<Double> {
+        var values: [Double] = []
+        
+        // Add data points
+        values.append(contentsOf: records.map { $0.value })
+        if type.needsSecondaryValue {
+            values.append(contentsOf: records.compactMap { $0.secondaryValue })
+        }
+        
+        // Add normal range bounds
+        if let min = type.normalRange.min {
+            values.append(min)
+        }
+        if let max = type.normalRange.max {
+            values.append(max)
+        }
+        if let secondaryRange = type.secondaryNormalRange {
+            if let min = secondaryRange.min {
+                values.append(min)
+            }
+            if let max = secondaryRange.max {
+                values.append(max)
+            }
+        }
+        
+        // Calculate domain with padding
+        let minValue = values.min() ?? 0
+        let maxValue = values.max() ?? 100
+        let padding = (maxValue - minValue) * 0.1
+        
+        return (minValue - padding)...(maxValue + padding)
+    }
+    
+    private func calculateBMI(weight: Double) -> Double? {
+        guard let height = healthStore.userProfile?.height else { return nil }
+        let heightInMeters = height / 100
+        return weight / (heightInMeters * heightInMeters)
+    }
     
     var body: some View {
         Chart {
+            // Primary value normal range
+            if type == .weight {
+                // BMI normal range
+                RuleMark(y: .value("最小BMI", 18.5))
+                    .foregroundStyle(Theme.accent.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    .annotation(position: .leading) {
+                        Text("BMI: 18.5")
+                            .font(.caption)
+                            .foregroundColor(Theme.accent)
+                    }
+                
+                RuleMark(y: .value("最大BMI", 23.9))
+                    .foregroundStyle(Theme.accent.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    .annotation(position: .leading) {
+                        Text("BMI: 23.9")
+                            .font(.caption)
+                            .foregroundColor(Theme.accent)
+                    }
+            } else {
+                if let min = type.normalRange.min {
+                    RuleMark(y: .value("最小值", min))
+                        .foregroundStyle(Theme.accent.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", min))")
+                                .font(.caption)
+                                .foregroundColor(Theme.accent)
+                        }
+                }
+                
+                if let max = type.normalRange.max {
+                    RuleMark(y: .value("最大值", max))
+                        .foregroundStyle(Theme.accent.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", max))")
+                                .font(.caption)
+                                .foregroundColor(Theme.accent)
+                        }
+                }
+            }
+            
+            // Secondary value normal range (for blood pressure)
+            if let secondaryRange = type.secondaryNormalRange {
+                if let min = secondaryRange.min {
+                    RuleMark(y: .value("最小值", min))
+                        .foregroundStyle(Theme.secondaryText.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .trailing) {
+                            Text("\(String(format: "%.1f", min))")
+                                .font(.caption)
+                                .foregroundColor(Theme.secondaryText)
+                        }
+                }
+                
+                if let max = secondaryRange.max {
+                    RuleMark(y: .value("最大值", max))
+                        .foregroundStyle(Theme.secondaryText.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .trailing) {
+                            Text("\(String(format: "%.1f", max))")
+                                .font(.caption)
+                                .foregroundColor(Theme.secondaryText)
+                        }
+                }
+            }
+            
+            // Data points
             ForEach(records) { record in
-                LineMark(
-                    x: .value("日期", record.date),
-                    y: .value(type.valueLabel, record.value)
-                )
-                .foregroundStyle(Theme.accent)
-                
-                PointMark(
-                    x: .value("日期", record.date),
-                    y: .value(type.valueLabel, record.value)
-                )
-                .foregroundStyle(Theme.accent)
-                
-                if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
+                if type == .weight {
+                    // Show weight
                     LineMark(
                         x: .value("日期", record.date),
-                        y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        y: .value("体重", record.value)
                     )
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.accent)
                     
                     PointMark(
                         x: .value("日期", record.date),
-                        y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        y: .value("体重", record.value)
                     )
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.accent)
+                    
+                    // Show BMI if height is available
+                    if let bmi = calculateBMI(weight: record.value) {
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value("BMI", bmi)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                        
+                        PointMark(
+                            x: .value("日期", record.date),
+                            y: .value("BMI", bmi)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                    }
+                } else {
+                    LineMark(
+                        x: .value("日期", record.date),
+                        y: .value(type.valueLabel, record.value)
+                    )
+                    .foregroundStyle(Theme.accent)
+                    
+                    PointMark(
+                        x: .value("日期", record.date),
+                        y: .value(type.valueLabel, record.value)
+                    )
+                    .foregroundStyle(Theme.accent)
+                    
+                    if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                        
+                        PointMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                    }
                 }
             }
         }
+        .chartYScale(domain: chartYDomain)
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisValueLabel("\(value.index)")
@@ -118,10 +259,29 @@ struct ChartSection: View {
 struct RecordRow: View {
     let record: HealthRecord
     let type: HealthRecord.RecordType
+    @ObservedObject var healthStore: HealthStore
+    
+    private func calculateBMI(weight: Double) -> Double? {
+        guard let height = healthStore.userProfile?.height else { return nil }
+        let heightInMeters = height / 100
+        return weight / (heightInMeters * heightInMeters)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if type.needsSecondaryValue, let diastolic = record.secondaryValue {
+            if type == .weight {
+                HStack {
+                    Text("\(String(format: "%.1f", record.value)) \(record.unit)")
+                        .font(.title3)
+                        .foregroundColor(Theme.text)
+                    
+                    if let bmi = calculateBMI(weight: record.value) {
+                        Text("BMI: \(String(format: "%.1f", bmi))")
+                            .font(.title3)
+                            .foregroundColor(Theme.secondaryText)
+                    }
+                }
+            } else if type.needsSecondaryValue, let diastolic = record.secondaryValue {
                 Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
                     .font(.title3)
                     .foregroundColor(Theme.text)

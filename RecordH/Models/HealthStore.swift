@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+
 class HealthStore: ObservableObject {
     @Published var userProfile: UserProfile?
     @Published var healthRecords: [HealthRecord] = []

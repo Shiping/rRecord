@@ -28,7 +28,7 @@ struct DashboardView: View {
                     // Daily Notes Section
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("笔记")
+                            Text("最近笔记")
                                 .font(.headline)
                                 .foregroundColor(Theme.text)
                             Spacer()
@@ -41,11 +41,24 @@ struct DashboardView: View {
                             }
                         }
                         
-                        if let todayNotes = healthStore.getTodaysNotes().first {
-                            NoteSummaryCard(note: todayNotes)
-                                .onTapGesture {
-                                    editNote(todayNotes)
+                        let recentNotes = healthStore.dailyNotes
+                            .sorted(by: { $0.date > $1.date })
+                            .prefix(5)
+                        
+                        if recentNotes.isEmpty {
+                            Text("暂无笔记")
+                                .font(.subheadline)
+                                .foregroundColor(Theme.secondaryText)
+                                .padding(.vertical, 8)
+                        } else {
+                            ForEach(recentNotes) { note in
+                                NavigationLink {
+                                    NoteDetailView(note: note)
+                                } label: {
+                                    NoteSummaryCard(note: note)
                                 }
+                                .buttonStyle(.plain)
+                            }
                         }
                         
                         Button(action: { showingAddNote = true }) {

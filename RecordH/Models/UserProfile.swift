@@ -29,6 +29,30 @@ struct HealthRecord: Identifiable, Codable {
         case bloodLipids
         case uricAcid
         
+        var normalRange: (min: Double?, max: Double?) {
+            switch self {
+            case .weight:
+                return (18.5, 23.9) // BMI
+            case .bloodSugar:
+                return (3.9, 6.1)
+            case .bloodPressure:
+                return (90, 120) // Systolic
+            case .bloodLipids:
+                return (nil, 5.2)
+            case .uricAcid:
+                return (150, 420)
+            }
+        }
+        
+        var secondaryNormalRange: (min: Double?, max: Double?)? {
+            switch self {
+            case .bloodPressure:
+                return (60, 80) // Diastolic
+            default:
+                return nil
+            }
+        }
+        
         var unit: String {
             switch self {
             case .weight: return "kg"
