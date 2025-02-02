@@ -72,7 +72,22 @@ class HealthStore: ObservableObject {
     }
     
     func addHealthRecord(_ record: HealthRecord) {
-        healthRecords.append(record)
+        let calendar = Calendar.current
+        let recordDate = calendar.startOfDay(for: record.date)
+        
+        // Check if there's already a record for this day and type
+        if let existingIndex = healthRecords.firstIndex(where: { existing in
+            let existingDate = calendar.startOfDay(for: existing.date)
+            return existing.type == record.type && existingDate == recordDate
+        }) {
+            // If existing record has a lower value, replace it
+            if healthRecords[existingIndex].value < record.value {
+                healthRecords[existingIndex] = record
+            }
+        } else {
+            // No record exists for this day and type, add the new record
+            healthRecords.append(record)
+        }
         saveData()
     }
     
@@ -113,9 +128,20 @@ class HealthStore: ObservableObject {
     }
     
     func getRecords(for type: HealthRecord.RecordType) -> [HealthRecord] {
-        return healthRecords
-            .filter { $0.type == type }
-            .sorted { $0.date > $1.date }
+        let filteredRecords = healthRecords.filter { $0.type == type }
+        let calendar = Calendar.current
+        
+        // Group records by day
+        let groupedRecords = Dictionary(grouping: filteredRecords) { record in
+            calendar.startOfDay(for: record.date)
+        }
+        
+        // Keep only the maximum value for each day
+        let dailyMaxRecords = groupedRecords.map { (date, records) -> HealthRecord in
+            records.max { a, b in a.value < b.value }!
+        }
+        
+        return dailyMaxRecords.sorted { $0.date > $1.date }
     }
     
     func getTodaysNotes() -> [DailyNote] {
