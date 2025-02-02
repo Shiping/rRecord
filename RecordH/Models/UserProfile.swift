@@ -28,6 +28,8 @@ struct HealthRecord: Identifiable, Codable {
         case bloodPressure
         case bloodLipids
         case uricAcid
+        case steps
+        case sleep
         
         var normalRange: (min: Double?, max: Double?) {
             switch self {
@@ -41,6 +43,10 @@ struct HealthRecord: Identifiable, Codable {
                 return (nil, 5.2)
             case .uricAcid:
                 return (150, 420)
+            case .steps:
+                return (10000, nil) // 最小步数10000，无上限
+            case .sleep:
+                return (6 * 3600, 8 * 3600) // 6-8小时，转换为秒
             }
         }
         
@@ -60,6 +66,8 @@ struct HealthRecord: Identifiable, Codable {
             case .bloodPressure: return "mmHg"
             case .bloodLipids: return "mmol/L"
             case .uricAcid: return "μmol/L"
+            case .steps: return "步"
+            case .sleep: return "小时"
             }
         }
         
@@ -70,6 +78,8 @@ struct HealthRecord: Identifiable, Codable {
             case .bloodPressure: return "血压"
             case .bloodLipids: return "血脂"
             case .uricAcid: return "尿酸"
+            case .steps: return "步数"
+            case .sleep: return "睡眠时间"
             }
         }
         

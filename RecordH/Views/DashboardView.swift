@@ -108,14 +108,27 @@ struct MetricCard: View {
                 if type.needsSecondaryValue, let diastolic = record.secondaryValue {
                     Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
                         .font(.title2)
+                } else if type == .sleep {
+                    Text("\(String(format: "%.1f", record.value / 3600)) \(record.unit)")
+                        .font(.title2)
                 } else {
-                    Text("\(String(format: "%.1f", record.value)) \(record.unit)")
+                    Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
                         .font(.title2)
                 }
                 
-                Text(record.date.formatted(.dateTime.day().month()))
-                    .font(.caption)
-                    .foregroundColor(Theme.secondaryText)
+                HStack {
+                    Text(record.date.formatted(.dateTime.day().month()))
+                        .font(.caption)
+                        .foregroundColor(Theme.secondaryText)
+                    
+                    if type == .steps || type == .sleep {
+                        let isNormal = type == .steps ? 
+                            record.value >= (type.normalRange.min ?? 0) :
+                            (record.value >= (type.normalRange.min ?? 0) && record.value <= (type.normalRange.max ?? Double.infinity))
+                        Image(systemName: isNormal ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundColor(isNormal ? .green : .red)
+                    }
+                }
             } else {
                 Text("暂无数据")
                     .font(.title2)
