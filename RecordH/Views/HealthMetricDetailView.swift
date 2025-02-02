@@ -28,6 +28,32 @@ struct HealthMetricDetailView: View {
                 .listRowBackground(Theme.cardBackground)
                 .listRowInsets(EdgeInsets())
                 .padding()
+            } else if type == .bloodPressure {
+                // Blood Pressure Charts
+                VStack(spacing: 20) {
+                    // Systolic Chart
+                    BloodPressureChartSection(
+                        records: records,
+                        title: "收缩压",
+                        valueSelector: { $0.value },
+                        normalRange: type.normalRange,
+                        color: Theme.accent
+                    )
+                    .frame(height: 200)
+                    
+                    // Diastolic Chart
+                    BloodPressureChartSection(
+                        records: records,
+                        title: "舒张压",
+                        valueSelector: { $0.secondaryValue ?? 0 },
+                        normalRange: type.secondaryNormalRange ?? (min: nil, max: nil),
+                        color: Theme.secondaryText
+                    )
+                    .frame(height: 200)
+                }
+                .listRowBackground(Theme.cardBackground)
+                .listRowInsets(EdgeInsets())
+                .padding()
             } else {
                 // Other metrics Chart
                 ChartSection(records: records, type: type, healthStore: healthStore)
@@ -102,6 +128,12 @@ struct WeightChartSection: View {
             
             Chart {
                 ForEach(records) { record in
+                    LineMark(
+                        x: .value("日期", record.date),
+                        y: .value("体重", record.value)
+                    )
+                    .foregroundStyle(Theme.accent)
+                    
                     PointMark(
                         x: .value("日期", record.date),
                         y: .value("体重", record.value)
@@ -176,6 +208,12 @@ struct BMIChartSection: View {
                 
                 ForEach(records) { record in
                     if let bmi = calculateBMI(weight: record.value) {
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value("BMI", bmi)
+                        )
+                        .foregroundStyle(Theme.accent)
+                        
                         PointMark(
                             x: .value("日期", record.date),
                             y: .value("BMI", bmi)
@@ -292,20 +330,37 @@ struct ChartSection: View {
                 }
             }
             
-            // Data points
+            // Primary value points and lines
             ForEach(records) { record in
-                PointMark(
+                LineMark(
                     x: .value("日期", record.date),
                     y: .value(type.valueLabel, record.value)
                 )
                 .foregroundStyle(Theme.accent)
                 
-                if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
-                    PointMark(
-                        x: .value("日期", record.date),
-                        y: .value(type.secondaryValueLabel ?? "", secondaryValue)
-                    )
-                    .foregroundStyle(Theme.secondaryText)
+                PointMark(
+                    x: .value("日期", record.date),
+                    y: .value(type.valueLabel, record.value)
+                )
+                .foregroundStyle(Theme.accent)
+            }
+            
+            // Secondary value points and lines (for blood pressure)
+            if type.needsSecondaryValue {
+                ForEach(records) { record in
+                    if let secondaryValue = record.secondaryValue {
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                        
+                        PointMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.secondaryValueLabel ?? "", secondaryValue)
+                        )
+                        .foregroundStyle(Theme.secondaryText)
+                    }
                 }
             }
         }
@@ -320,6 +375,96 @@ struct ChartSection: View {
             AxisMarks(values: .stride(by: .day)) { value in
                 AxisGridLine()
                 AxisValueLabel(format: .dateTime.day().month())
+            }
+        }
+    }
+}
+
+struct BloodPressureChartSection: View {
+    let records: [HealthRecord]
+    let title: String
+    let valueSelector: (HealthRecord) -> Double
+    let normalRange: (min: Double?, max: Double?)
+    let color: Color
+    
+    private var chartYDomain: ClosedRange<Double> {
+        let values = records.map(valueSelector)
+        var minValue = values.min() ?? 0
+        var maxValue = values.max() ?? 100
+        
+        // Include normal range bounds in domain calculation
+        if let min = normalRange.min {
+            minValue = Swift.min(minValue, min)
+        }
+        if let max = normalRange.max {
+            maxValue = Swift.max(maxValue, max)
+        }
+        
+        let padding = (maxValue - minValue) * 0.1
+        return (minValue - padding)...(maxValue + padding)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(Theme.text)
+                .padding(.leading)
+            
+            Chart {
+                // Normal range lines
+                if let min = normalRange.min {
+                    RuleMark(y: .value("最小值", min))
+                        .foregroundStyle(color.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", min))")
+                                .font(.caption)
+                                .foregroundColor(color)
+                        }
+                }
+                
+                if let max = normalRange.max {
+                    RuleMark(y: .value("最大值", max))
+                        .foregroundStyle(color.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", max))")
+                                .font(.caption)
+                                .foregroundColor(color)
+                        }
+                }
+                
+                // Data points and lines
+                ForEach(records) { record in
+                    LineMark(
+                        x: .value("日期", record.date),
+                        y: .value(title, valueSelector(record))
+                    )
+                    .foregroundStyle(color)
+                    
+                    PointMark(
+                        x: .value("日期", record.date),
+                        y: .value(title, valueSelector(record))
+                    )
+                    .foregroundStyle(color)
+                }
+            }
+            .chartYScale(domain: chartYDomain)
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisValueLabel {
+                        Text("\(String(format: "%.1f", value.as(Double.self) ?? 0))")
+                            .foregroundColor(Theme.text)
+                    }
+                    AxisGridLine()
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day)) { value in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.day().month())
+                }
             }
         }
     }
