@@ -12,7 +12,26 @@ class HealthStore: ObservableObject {
     
     init() {
         loadData()
+        convertExistingSleepRecords() // Convert any existing sleep records from hours to seconds
         requestAuthorization()
+    }
+    
+    private func convertExistingSleepRecords() {
+        let sleepRecords = healthRecords.filter { $0.type == .sleep }
+        for record in sleepRecords {
+            // If value is less than 24, it's likely in hours and needs conversion to seconds
+            if record.value < 24 {
+                let updatedRecord = HealthRecord(
+                    id: record.id,
+                    date: record.date,
+                    type: .sleep,
+                    value: record.value * 3600, // Convert hours to seconds
+                    secondaryValue: record.secondaryValue,
+                    unit: record.unit
+                )
+                updateHealthRecord(updatedRecord)
+            }
+        }
     }
     
     private func loadData() {
@@ -180,7 +199,7 @@ class HealthStore: ObservableObject {
                 }
             }
             
-            // Convert to hours and create record
+            // Store sleep duration in seconds
             let record = HealthRecord(id: UUID(),
                                     date: now,
                                     type: .sleep,

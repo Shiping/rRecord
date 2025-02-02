@@ -281,6 +281,12 @@ struct RecordRow: View {
                             .foregroundColor(Theme.secondaryText)
                     }
                 }
+            } else if type == .sleep {
+                let hours = Int(record.value / 3600)
+                let minutes = Int((record.value.truncatingRemainder(dividingBy: 3600)) / 60)
+                Text("\(hours)小时\(minutes)分钟")
+                    .font(.title3)
+                    .foregroundColor(Theme.text)
             } else if type.needsSecondaryValue, let diastolic = record.secondaryValue {
                 Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
                     .font(.title3)
@@ -323,7 +329,12 @@ struct AddRecordSheet: View {
         self.editingRecord = editingRecord
         
         if let record = editingRecord {
-            _value = State(initialValue: String(format: "%.1f", record.value))
+            if type == .sleep {
+                // Convert seconds to hours for editing
+                _value = State(initialValue: String(format: "%.1f", record.value / 3600))
+            } else {
+                _value = State(initialValue: String(format: "%.1f", record.value))
+            }
             _selectedDate = State(initialValue: record.date)
             _note = State(initialValue: record.note ?? "")
             if let secondary = record.secondaryValue {
@@ -385,11 +396,14 @@ struct AddRecordSheet: View {
             return
         }
         
+        // Convert hours to seconds for sleep records
+        let finalValue = type == .sleep ? primaryValue * 3600 : primaryValue
+        
         let record = HealthRecord(
             id: editingRecord?.id ?? UUID(),
             date: selectedDate,
             type: type,
-            value: primaryValue,
+            value: finalValue,
             secondaryValue: diastolicValue,
             unit: type.unit,
             note: note.isEmpty ? nil : note

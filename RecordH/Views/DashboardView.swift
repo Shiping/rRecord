@@ -109,7 +109,10 @@ struct MetricCard: View {
                     Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
                         .font(.title2)
                 } else if type == .sleep {
-                    Text("\(String(format: "%.1f", record.value / 3600)) \(record.unit)")
+                    // Display sleep duration in hours and minutes
+                    let hours = Int(record.value / 3600)
+                    let minutes = Int((record.value.truncatingRemainder(dividingBy: 3600)) / 60)
+                    Text("\(hours)小时\(minutes)分钟")
                         .font(.title2)
                 } else {
                     Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
