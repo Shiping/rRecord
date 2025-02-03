@@ -47,7 +47,7 @@ struct HealthRecord: Identifiable, Codable {
             case .steps:
                 return (10000, nil) // 最小步数10000，无上限
             case .sleep:
-                return (6 * 3600, 8 * 3600) // 6-8小时,转换为秒
+                return (6, 8) // 6-8小时
             case .flightsClimbed:
                 return (10, nil) // 每日建议至少10层
             }

@@ -12,20 +12,20 @@ class HealthStore: ObservableObject {
     
     init() {
         loadData()
-        convertExistingSleepRecords() // Convert any existing sleep records from hours to seconds
+        convertExistingSleepRecords() // Convert any existing sleep records from seconds to hours
         requestAuthorization()
     }
     
     private func convertExistingSleepRecords() {
         let sleepRecords = healthRecords.filter { $0.type == .sleep }
         for record in sleepRecords {
-            // If value is less than 24, it's likely in hours and needs conversion to seconds
-            if record.value < 24 {
+            // If value is greater than 24, it's likely in seconds and needs conversion to hours
+            if record.value > 24 {
                 let updatedRecord = HealthRecord(
                     id: record.id,
                     date: record.date,
                     type: .sleep,
-                    value: record.value * 3600, // Convert hours to seconds
+                    value: record.value / 3600, // Convert seconds to hours
                     secondaryValue: record.secondaryValue,
                     unit: record.unit
                 )
@@ -177,7 +177,7 @@ class HealthStore: ObservableObject {
         fetchTodayFlightsClimbed()
     }
 
-private func fetchTodayStepCount() {
+    private func fetchTodayStepCount() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
         
         let now = Date()
@@ -265,11 +265,12 @@ private func fetchTodayStepCount() {
                 }
             }
             
-            // Store sleep duration in seconds
+            // Store sleep duration in hours
+            let sleepHours = totalSleepDuration / 3600 // Convert seconds to hours
             let record = HealthRecord(id: UUID(),
                                     date: now,
                                     type: .sleep,
-                                    value: totalSleepDuration,
+                                    value: sleepHours,
                                     secondaryValue: nil,
                                     unit: "小时")
             
