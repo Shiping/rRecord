@@ -4,6 +4,7 @@ struct DashboardView: View {
     @ObservedObject var healthStore: HealthStore
     @State private var showingAddNote = false
     @State private var noteToEdit: DailyNote? = nil
+    @State private var isRefreshing = false
     
     private let columns = [
         GridItem(.flexible()),
@@ -13,6 +14,9 @@ struct DashboardView: View {
     var body: some View {
         NavigationView {
             ScrollView {
+                RefreshControl(isRefreshing: $isRefreshing) {
+                    refreshData()
+                }
                 VStack(spacing: 20) {
                     // Latest Metrics Grid
                     LazyVGrid(columns: columns, spacing: 15) {
@@ -52,9 +56,9 @@ struct DashboardView: View {
                                 .padding(.vertical, 8)
                         } else {
                             ForEach(recentNotes) { note in
-                                NavigationLink {
-                                    NoteDetailView(note: note)
-                                } label: {
+                            NavigationLink {
+                                NoteDetailView(healthStore: healthStore, note: note)
+                            } label: {
                                     NoteSummaryCard(note: note)
                                 }
                                 .buttonStyle(.plain)
@@ -77,15 +81,30 @@ struct DashboardView: View {
             .navigationTitle("健康记录")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: ProfileView(healthStore: healthStore)) {
-                        Image(systemName: "person.circle")
-                            .foregroundColor(Theme.accent)
+                    HStack {
+                        Button(action: refreshData) {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(Theme.accent)
+                        }
+                        NavigationLink(destination: ProfileView(healthStore: healthStore)) {
+                            Image(systemName: "person.circle")
+                                .foregroundColor(Theme.accent)
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showingAddNote) {
                 AddNoteView(healthStore: healthStore, noteToEdit: noteToEdit)
             }
+        }
+    }
+    
+    private func refreshData() {
+        isRefreshing = true
+        healthStore.refreshHealthData()
+        // Give some time for the refresh animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isRefreshing = false
         }
     }
     
@@ -99,10 +118,33 @@ struct MetricCard: View {
     let type: HealthRecord.RecordType
     let record: HealthRecord?
     
+    private var iconName: String {
+        switch type {
+        case .steps:
+            return "figure.walk"
+        case .sleep:
+            return "bed.double.fill"
+        case .weight:
+            return "scalemass.fill"
+        case .bloodPressure:
+            return "heart.fill"
+        case .bloodSugar:
+            return "drop.fill"
+        case .bloodLipids:
+            return "chart.line.uptrend.xyaxis"
+        case .uricAcid:
+            return "cross.vial.fill"
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(type.displayName)
-                .font(.headline)
+            HStack {
+                Image(systemName: iconName)
+                    .foregroundColor(Theme.accent)
+                Text(type.displayName)
+                    .font(.headline)
+            }
             
             if let record = record {
                 if type.needsSecondaryValue, let diastolic = record.secondaryValue {

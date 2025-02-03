@@ -1,16 +1,35 @@
 import SwiftUI
 
 struct NoteDetailView: View {
+    @ObservedObject var healthStore: HealthStore
     let note: DailyNote
+    @State private var isEditing = false
+    @State private var editedContent: String
+    @State private var editedTags: [String]
+    
+    init(healthStore: HealthStore, note: DailyNote) {
+        self.healthStore = healthStore
+        self.note = note
+        _editedContent = State(initialValue: note.content)
+        _editedTags = State(initialValue: note.tags)
+    }
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Content
-                Text(note.content)
-                    .font(.body)
-                    .foregroundColor(Theme.text)
-                    .padding(.vertical)
+                if isEditing {
+                    TextEditor(text: $editedContent)
+                        .font(.body)
+                        .foregroundColor(Theme.text)
+                        .frame(minHeight: 100)
+                        .padding(.vertical)
+                } else {
+                    Text(note.content)
+                        .font(.body)
+                        .foregroundColor(Theme.text)
+                        .padding(.vertical)
+                }
                 
                 // Date
                 HStack {
@@ -22,12 +41,21 @@ struct NoteDetailView: View {
                 }
                 
                 // Tags
-                if !note.tags.isEmpty {
-                    Text("标签")
-                        .font(.headline)
-                        .foregroundColor(Theme.text)
-                        .padding(.top)
-                    
+                Text("标签")
+                    .font(.headline)
+                    .foregroundColor(Theme.text)
+                    .padding(.top)
+                
+                if isEditing {
+                    TextField("添加标签，用逗号分隔", text: Binding(
+                        get: { editedTags.joined(separator: ", ") },
+                        set: { newValue in
+                            editedTags = newValue.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                        }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    .foregroundColor(Theme.text)
+                } else if !note.tags.isEmpty {
                     FlowLayout(spacing: 8) {
                         ForEach(note.tags, id: \.self) { tag in
                             Text(tag)
@@ -46,6 +74,25 @@ struct NoteDetailView: View {
         }
         .background(Theme.background)
         .navigationTitle("笔记详情")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    if isEditing {
+                        // Save changes
+                        let updatedNote = DailyNote(
+                            id: note.id,
+                            date: note.date,
+                            content: editedContent,
+                            tags: editedTags
+                        )
+                        healthStore.updateDailyNote(updatedNote)
+                    }
+                    isEditing.toggle()
+                }) {
+                    Text(isEditing ? "完成" : "编辑")
+                }
+            }
+        }
     }
 }
 

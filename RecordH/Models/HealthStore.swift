@@ -169,7 +169,13 @@ class HealthStore: ObservableObject {
         }
     }
     
-    private func fetchTodayStepCount() {
+    // Public refresh method
+func refreshHealthData() {
+    fetchTodayStepCount()
+    fetchLastNightSleep()
+}
+
+private func fetchTodayStepCount() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
         
         let now = Date()
