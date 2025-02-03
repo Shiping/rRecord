@@ -265,41 +265,56 @@ struct ChartSection: View {
     }
     
     var body: some View {
-        Chart {
-            if let min = type.normalRange.min {
-                RuleMark(y: .value("最小值", min))
-                    .foregroundStyle(Theme.color(.accent, scheme: colorScheme).opacity(0.5))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                    .annotation(position: .leading) {
-                        Text("\(String(format: "%.1f", min))")
-                            .font(.caption)
-                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                    }
-            }
+            Chart {
+                if let min = type.normalRange.min {
+                    RuleMark(y: .value("最小值", min))
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme).opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", min))")
+                                .font(.caption)
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        }
+                }
             
-            if let max = type.normalRange.max {
-                RuleMark(y: .value("最大值", max))
-                    .foregroundStyle(Theme.color(.accent, scheme: colorScheme).opacity(0.5))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                    .annotation(position: .leading) {
-                        Text("\(String(format: "%.1f", max))")
-                            .font(.caption)
-                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                    }
-            }
+                if let max = type.normalRange.max {
+                    RuleMark(y: .value("最大值", max))
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme).opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("\(String(format: "%.1f", max))")
+                                .font(.caption)
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        }
+                }
             
-            ForEach(records) { record in
-                LineMark(
-                    x: .value("日期", record.date),
-                    y: .value(type.valueLabel, record.value)
-                )
-                .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
-                
-                PointMark(
-                    x: .value("日期", record.date),
-                    y: .value(type.valueLabel, record.value)
-                )
-                .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
+                ForEach(records) { record in
+                    if type == .sleep {
+                        let totalHours = Double(record.value) + Double(record.secondaryValue ?? 0) / 60.0
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.valueLabel, totalHours)
+                        )
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
+                        
+                        PointMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.valueLabel, totalHours)
+                        )
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
+                    } else {
+                        LineMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.valueLabel, record.value)
+                        )
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
+                        
+                        PointMark(
+                            x: .value("日期", record.date),
+                            y: .value(type.valueLabel, record.value)
+                        )
+                        .foregroundStyle(Theme.color(.accent, scheme: colorScheme))
+                    }
                 
                 if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
                     LineMark(

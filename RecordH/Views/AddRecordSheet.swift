@@ -19,8 +19,14 @@ struct AddRecordSheet: View {
         self.editingRecord = editingRecord
         
         // Initialize state with editing record values if present
-        _value = State(initialValue: editingRecord?.value ?? 0)
-        _secondaryValue = State(initialValue: editingRecord?.secondaryValue ?? 0)
+        if type == .sleep && editingRecord != nil {
+            let totalMinutes = editingRecord!.value
+            _value = State(initialValue: Double(Int(totalMinutes) / 60))
+            _secondaryValue = State(initialValue: Double(Int(totalMinutes.truncatingRemainder(dividingBy: 60))))
+        } else {
+            _value = State(initialValue: editingRecord?.value ?? 0)
+            _secondaryValue = State(initialValue: editingRecord?.secondaryValue ?? 0)
+        }
         _note = State(initialValue: editingRecord?.note ?? "")
         _date = State(initialValue: editingRecord?.date ?? Date())
     }
@@ -29,23 +35,71 @@ struct AddRecordSheet: View {
         NavigationView {
             Form {
                 Section {
-                    HStack {
-                        Text(type.valueLabel)
-                        Spacer()
-                        TextField("Value", value: $value, formatter: NumberFormatter())
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.decimalPad)
-                        Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .sleep ? "小时" : type == .steps ? "步" : ""))
-                    }
-                    
-                    if type.needsSecondaryValue {
+                    if type == .sleep {
+                        VStack(spacing: 15) {
+                            // Number input fields
+                            HStack(spacing: 20) {
+                                VStack(alignment: .leading) {
+                                    Text("小时")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    TextField("0-23", value: $value, format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .keyboardType(.numberPad)
+                                        .frame(width: 80)
+                                }
+                                
+                                VStack(alignment: .leading) {
+                                    Text("分钟")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    TextField("0-59", value: $secondaryValue, format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .keyboardType(.numberPad)
+                                        .frame(width: 80)
+                                }
+                            }
+                            .padding(.top, 5)
+                            
+                            // Picker wheels
+                            HStack(spacing: 0) {
+                                Picker("小时", selection: $value) {
+                                    ForEach(0..<24) { hour in
+                                        Text("\(hour)小时").tag(Double(hour))
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 100)
+                                
+                                Picker("分钟", selection: $secondaryValue) {
+                                    ForEach(0..<60) { minute in
+                                        Text("\(minute)分钟").tag(Double(minute))
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 100)
+                            }
+                            .padding(.horizontal, -20)
+                        }
+                    } else {
                         HStack {
-                            Text(type == .bloodPressure ? "舒张压" : "")
+                            Text(type.valueLabel)
                             Spacer()
-                            TextField("Value", value: $secondaryValue, formatter: NumberFormatter())
+                            TextField("Value", value: $value, formatter: NumberFormatter())
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.decimalPad)
-                            Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .sleep ? "小时" : type == .steps ? "步" : ""))
+                            Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .steps ? "步" : ""))
+                        }
+                        
+                        if type.needsSecondaryValue {
+                            HStack {
+                                Text(type == .bloodPressure ? "舒张压" : "")
+                                Spacer()
+                                TextField("Value", value: $secondaryValue, formatter: NumberFormatter())
+                                    .multilineTextAlignment(.trailing)
+                                    .keyboardType(.decimalPad)
+                                Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .steps ? "步" : ""))
+                            }
                         }
                     }
                     
@@ -70,6 +124,11 @@ struct AddRecordSheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
+                        // Validate and constrain values
+                        if type == .sleep {
+                            value = Double(min(max(Int(value), 0), 23))
+                            secondaryValue = Double(min(max(Int(secondaryValue), 0), 59))
+                        }
                         saveRecord()
                         isPresented = false
                     }
@@ -79,13 +138,15 @@ struct AddRecordSheet: View {
     }
     
     private func saveRecord() {
+        let finalValue = value
+        
         if let editingRecord = editingRecord {
             let updatedRecord = HealthRecord(
                 id: editingRecord.id,
                 date: date,
                 type: type,
-                value: value,
-                secondaryValue: type.needsSecondaryValue ? secondaryValue : nil,
+                value: finalValue,
+                secondaryValue: type == .bloodPressure ? secondaryValue : (type == .sleep ? secondaryValue : nil),
                 unit: editingRecord.unit,
                 note: note
             )
@@ -95,8 +156,8 @@ struct AddRecordSheet: View {
                 id: UUID(),
                 date: date,
                 type: type,
-                value: value,
-                secondaryValue: type.needsSecondaryValue ? secondaryValue : nil,
+                value: finalValue,
+                secondaryValue: type == .bloodPressure ? secondaryValue : (type == .sleep ? secondaryValue : nil),
                 unit: type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .sleep ? "小时" : type == .steps ? "步" : "",
                 note: note
             )

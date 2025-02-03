@@ -12,26 +12,7 @@ class HealthStore: ObservableObject {
     
     init() {
         loadData()
-        convertExistingSleepRecords() // Convert any existing sleep records from seconds to hours
         requestAuthorization()
-    }
-    
-    private func convertExistingSleepRecords() {
-        let sleepRecords = healthRecords.filter { $0.type == .sleep }
-        for record in sleepRecords {
-            // If value is greater than 24, it's likely in seconds and needs conversion to hours
-            if record.value > 24 {
-                let updatedRecord = HealthRecord(
-                    id: record.id,
-                    date: record.date,
-                    type: .sleep,
-                    value: record.value / 3600, // Convert seconds to hours
-                    secondaryValue: record.secondaryValue,
-                    unit: record.unit
-                )
-                updateHealthRecord(updatedRecord)
-            }
-        }
     }
     
     private func loadData() {
@@ -80,10 +61,8 @@ class HealthStore: ObservableObject {
             let existingDate = calendar.startOfDay(for: existing.date)
             return existing.type == record.type && existingDate == recordDate
         }) {
-            // If existing record has a lower value, replace it
-            if healthRecords[existingIndex].value < record.value {
-                healthRecords[existingIndex] = record
-            }
+            // Always update with the latest record for the day
+            healthRecords[existingIndex] = record
         } else {
             // No record exists for this day and type, add the new record
             healthRecords.append(record)
@@ -136,12 +115,12 @@ class HealthStore: ObservableObject {
             calendar.startOfDay(for: record.date)
         }
         
-        // Keep only the maximum value for each day
-        let dailyMaxRecords = groupedRecords.map { (date, records) -> HealthRecord in
-            records.max { a, b in a.value < b.value }!
+        // Keep only the latest record for each day
+        let dailyLatestRecords = groupedRecords.map { (_, records) -> HealthRecord in
+            records.max { a, b in a.date < b.date }!
         }
         
-        return dailyMaxRecords.sorted { $0.date > $1.date }
+        return dailyLatestRecords.sorted { $0.date > $1.date }
     }
     
     func getTodaysNotes() -> [DailyNote] {
@@ -152,15 +131,13 @@ class HealthStore: ObservableObject {
     private func requestAuthorization() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
               let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed),
-              let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else {
+              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed) else {
             return
         }
         
-        let typesToShare: Set<HKSampleType> = [uricAcidType]
-        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType, uricAcidType]
+        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType]
         
-        healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
+        healthStore.requestAuthorization(toShare: [], read: typesToRead) { success, error in
             if success {
                 print("授权成功")
                 self.fetchTodayStepCount()
@@ -176,63 +153,14 @@ class HealthStore: ObservableObject {
         fetchTodayStepCount()
         fetchLastNightSleep()
         fetchTodayFlightsClimbed()
-        fetchLatestUricAcid()
     }
     
     func saveUricAcid(_ record: HealthRecord) {
-        guard record.type == .uricAcid,
-              let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else {
-            return
-        }
-        
-        let unit = HKUnit.moleUnit(with: .micro, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
-        let quantity = HKQuantity(unit: unit, doubleValue: record.value)
-        let sample = HKQuantitySample(type: uricAcidType,
-                                    quantity: quantity,
-                                    start: record.date,
-                                    end: record.date)
-        
-        healthStore.save(sample) { (success, error) in
-            if success {
-                DispatchQueue.main.async {
-                    self.addHealthRecord(record)
-                }
-            } else {
-                print("Error saving uric acid to HealthKit: \(String(describing: error?.localizedDescription))")
-            }
+        if record.type == .uricAcid {
+            addHealthRecord(record)
         }
     }
     
-    private func fetchLatestUricAcid() {
-        guard let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else { return }
-        
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-        let query = HKSampleQuery(sampleType: uricAcidType,
-                                predicate: nil,
-                                limit: 1,
-                                sortDescriptors: [sortDescriptor]) { [weak self] (_, samples, error) in
-            guard let sample = samples?.first as? HKQuantitySample else {
-                return
-            }
-            
-            let unit = HKUnit.moleUnit(with: .micro, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
-            let uricAcidValue = sample.quantity.doubleValue(for: unit)
-            
-            let record = HealthRecord(id: UUID(),
-                                    date: sample.startDate,
-                                    type: .uricAcid,
-                                    value: uricAcidValue,
-                                    secondaryValue: nil,
-                                    unit: "μmol/L")
-            
-            DispatchQueue.main.async {
-                self?.addHealthRecord(record)
-            }
-        }
-        
-        healthStore.execute(query)
-    }
-
     private func fetchTodayStepCount() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
         
@@ -321,13 +249,25 @@ class HealthStore: ObservableObject {
                 }
             }
             
-            // Store sleep duration in hours
-            let sleepHours = totalSleepDuration / 3600 // Convert seconds to hours
+            // Convert total sleep duration from seconds to hours
+            let sleepHours = totalSleepDuration / 3600
+            
+            // Ensure we only store valid sleep durations
+            guard sleepHours > 0 else {
+                print("No valid sleep data found.")
+                return
+            }
+            
+            // Convert sleep duration to hours and minutes
+            let hours = Int(sleepHours)
+            let minutes = Int((sleepHours - Double(hours)) * 60)
+            
+            // Store sleep duration with both hours and minutes
             let record = HealthRecord(id: UUID(),
                                     date: now,
                                     type: .sleep,
-                                    value: sleepHours,
-                                    secondaryValue: nil,
+                                    value: Double(hours),
+                                    secondaryValue: Double(minutes),
                                     unit: "小时")
             
             DispatchQueue.main.async {

@@ -19,11 +19,17 @@ struct RecordRow: View {
             }
             
             HStack(alignment: .firstTextBaseline) {
-                Text("\(String(format: "%.1f", record.value))")
-                    .font(.title2)
-                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                Text(record.unit)
-                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                if type == .sleep {
+                    Text(formatElapsedTime(record.value, secondaryValue: record.secondaryValue))
+                        .font(.title2)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                } else {
+                    Text("\(String(format: "%.1f", record.value))")
+                        .font(.title2)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                    Text(record.unit)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                }
                 
                 if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
                     Text("/")
@@ -43,6 +49,12 @@ struct RecordRow: View {
             }
         }
         .padding(.vertical, 8)
+    }
+    
+    private func formatElapsedTime(_ value: Double, secondaryValue: Double?) -> String {
+        let hours = Int(value)
+        let minutes = Int(secondaryValue ?? 0)
+        return "\(hours)小时 \(minutes)分钟"
     }
 }
 

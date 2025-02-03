@@ -105,8 +105,10 @@ struct MetricCard: View {
         if type == .steps {
             isNormal = value >= (type.normalRange.min ?? 0)
         } else if type == .sleep {
-            isNormal = value >= (type.normalRange.min ?? 0) && 
-                      value <= (type.normalRange.max ?? Double.infinity)
+            // Convert seconds to hours for range check
+            let hoursValue = value / 3600
+            isNormal = hoursValue >= (type.normalRange.min ?? 0) && 
+                      hoursValue <= (type.normalRange.max ?? Double.infinity)
         } else {
             return StatusIcon(icon: "", color: .clear)
         }
@@ -152,9 +154,8 @@ struct MetricCard: View {
                     Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
                         .font(.title2)
                 } else if type == .sleep {
-                    // Display sleep duration in hours and minutes
-                    let hours = Int(record.value / 3600)
-                    let minutes = Int((record.value.truncatingRemainder(dividingBy: 3600)) / 60)
+                    let hours = Int(record.value)
+                    let minutes = Int(record.secondaryValue ?? 0)
                     Text("\(hours)小时\(minutes)分钟")
                         .font(.title2)
                 } else {
