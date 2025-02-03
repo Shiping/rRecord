@@ -123,6 +123,8 @@ struct MetricCard: View {
             return "figure.walk"
         case .sleep:
             return "bed.double.fill"
+        case .flightsClimbed:
+            return "stairs"
         case .weight:
             return "scalemass.fill"
         case .bloodPressure:
@@ -165,7 +167,7 @@ struct MetricCard: View {
                         .font(.caption)
                         .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     
-                    if type == .steps || type == .sleep {
+                    if type == .steps || type == .sleep || type == .flightsClimbed {
                         let statusIcon = getStatusIcon(type: type, value: record.value)
                         Image(systemName: statusIcon.icon)
                             .foregroundColor(statusIcon.color)

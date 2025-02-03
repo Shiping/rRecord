@@ -151,12 +151,13 @@ class HealthStore: ObservableObject {
     
     private func requestAuthorization() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
-              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed) else {
             return
         }
         
         let typesToShare: Set<HKSampleType> = []
-        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType]
+        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType]
         
         healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
             if success {
@@ -170,10 +171,11 @@ class HealthStore: ObservableObject {
     }
     
     // Public refresh method
-func refreshHealthData() {
-    fetchTodayStepCount()
-    fetchLastNightSleep()
-}
+    func refreshHealthData() {
+        fetchTodayStepCount()
+        fetchLastNightSleep()
+        fetchTodayFlightsClimbed()
+    }
 
 private func fetchTodayStepCount() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
@@ -207,6 +209,38 @@ private func fetchTodayStepCount() {
         healthStore.execute(query)
     }
     
+    private func fetchTodayFlightsClimbed() {
+        guard let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed) else { return }
+        
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(quantityType: flightsClimbedType,
+                                    quantitySamplePredicate: predicate,
+                                    options: .cumulativeSum) { [weak self] _, result, error in
+            guard let self = self,
+                  let result = result,
+                  let sum = result.sumQuantity() else {
+                return
+            }
+            
+            let flights = sum.doubleValue(for: HKUnit.count())
+            let record = HealthRecord(id: UUID(),
+                                    date: now,
+                                    type: .flightsClimbed,
+                                    value: flights,
+                                    secondaryValue: nil,
+                                    unit: "层")
+            
+            DispatchQueue.main.async {
+                self.addHealthRecord(record)
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+
     private func fetchLastNightSleep() {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
         
