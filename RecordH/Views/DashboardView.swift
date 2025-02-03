@@ -197,6 +197,10 @@ private struct RecentNotesSection: View {
                     .font(.headline)
                     .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 Spacer()
+                Button(action: { showingAddNote = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                }
                 NavigationLink {
                     AllNotesView(healthStore: healthStore)
                 } label: {
@@ -226,10 +230,6 @@ private struct RecentNotesSection: View {
                 }
             }
             
-            Button(action: { showingAddNote = true }) {
-                Label("添加笔记", systemImage: "plus.circle.fill")
-            }
-            .modernButton()
         }
     }
 }

@@ -152,12 +152,13 @@ class HealthStore: ObservableObject {
     private func requestAuthorization() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
               let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed) else {
+              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed),
+              let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else {
             return
         }
         
-        let typesToShare: Set<HKSampleType> = []
-        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType]
+        let typesToShare: Set<HKSampleType> = [uricAcidType]
+        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType, uricAcidType]
         
         healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
             if success {
@@ -175,6 +176,61 @@ class HealthStore: ObservableObject {
         fetchTodayStepCount()
         fetchLastNightSleep()
         fetchTodayFlightsClimbed()
+        fetchLatestUricAcid()
+    }
+    
+    func saveUricAcid(_ record: HealthRecord) {
+        guard record.type == .uricAcid,
+              let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else {
+            return
+        }
+        
+        let unit = HKUnit.moleUnit(with: .micro, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
+        let quantity = HKQuantity(unit: unit, doubleValue: record.value)
+        let sample = HKQuantitySample(type: uricAcidType,
+                                    quantity: quantity,
+                                    start: record.date,
+                                    end: record.date)
+        
+        healthStore.save(sample) { (success, error) in
+            if success {
+                DispatchQueue.main.async {
+                    self.addHealthRecord(record)
+                }
+            } else {
+                print("Error saving uric acid to HealthKit: \(String(describing: error?.localizedDescription))")
+            }
+        }
+    }
+    
+    private func fetchLatestUricAcid() {
+        guard let uricAcidType = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else { return }
+        
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        let query = HKSampleQuery(sampleType: uricAcidType,
+                                predicate: nil,
+                                limit: 1,
+                                sortDescriptors: [sortDescriptor]) { [weak self] (_, samples, error) in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                return
+            }
+            
+            let unit = HKUnit.moleUnit(with: .micro, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
+            let uricAcidValue = sample.quantity.doubleValue(for: unit)
+            
+            let record = HealthRecord(id: UUID(),
+                                    date: sample.startDate,
+                                    type: .uricAcid,
+                                    value: uricAcidValue,
+                                    secondaryValue: nil,
+                                    unit: "μmol/L")
+            
+            DispatchQueue.main.async {
+                self?.addHealthRecord(record)
+            }
+        }
+        
+        healthStore.execute(query)
     }
 
     private func fetchTodayStepCount() {
