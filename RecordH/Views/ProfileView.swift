@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @ObservedObject var healthStore: HealthStore
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     
     @State private var name: String = ""
@@ -39,12 +40,20 @@ struct ProfileView: View {
                 }
             }
             
+            Section(header: Text("外观设置")) {
+                Picker("主题", selection: $themeManager.currentTheme) {
+                    Text("系统").tag("system")
+                    Text("浅色").tag("light")
+                    Text("深色").tag("dark")
+                }
+            }
+
             Section {
                 Button("保存") {
                     saveProfile()
                 }
                 .frame(maxWidth: .infinity)
-                .foregroundColor(Theme.accent)
+                .foregroundColor(Theme.color(.accent, scheme: themeManager.colorScheme ?? .light))
             }
         }
         .navigationTitle("个人信息")

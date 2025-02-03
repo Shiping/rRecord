@@ -2,14 +2,10 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var healthStore: HealthStore
+    @Environment(\.colorScheme) var colorScheme
     @State private var showingAddNote = false
     @State private var noteToEdit: DailyNote? = nil
     @State private var isRefreshing = false
-    
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
     
     var body: some View {
         NavigationView {
@@ -19,57 +15,15 @@ struct DashboardView: View {
                 }
                 VStack(spacing: 20) {
                     // Latest Metrics Grid
-                    LazyVGrid(columns: columns, spacing: 15) {
-                        ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
-                            NavigationLink(destination: HealthMetricDetailView(type: type, healthStore: healthStore)) {
-                                MetricCard(type: type, record: healthStore.getLatestRecord(for: type))
-                                    .foregroundColor(Theme.text)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
+                    LatestMetricsGrid(healthStore: healthStore)
+                        .padding(.horizontal)
                     
                     // Daily Notes Section
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("最近笔记")
-                                .font(.headline)
-                                .foregroundColor(Theme.text)
-                            Spacer()
-                            NavigationLink {
-                                AllNotesView(healthStore: healthStore)
-                            } label: {
-                                Text("查看全部")
-                                    .font(.subheadline)
-                                    .foregroundColor(Theme.accent)
-                            }
-                        }
-                        
-                        let recentNotes = healthStore.dailyNotes
-                            .sorted(by: { $0.date > $1.date })
-                            .prefix(5)
-                        
-                        if recentNotes.isEmpty {
-                            Text("暂无笔记")
-                                .font(.subheadline)
-                                .foregroundColor(Theme.secondaryText)
-                                .padding(.vertical, 8)
-                        } else {
-                            ForEach(recentNotes) { note in
-                            NavigationLink {
-                                NoteDetailView(healthStore: healthStore, note: note)
-                            } label: {
-                                    NoteSummaryCard(note: note)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        
-                        Button(action: { showingAddNote = true }) {
-                            Label("添加笔记", systemImage: "plus.circle.fill")
-                        }
-                        .modernButton()
-                    }
+                    RecentNotesSection(
+                        healthStore: healthStore,
+                        showingAddNote: $showingAddNote,
+                        noteToEdit: $noteToEdit
+                    )
                     .padding()
                     
                     // Daily Recommendations
@@ -77,18 +31,18 @@ struct DashboardView: View {
                         .padding()
                 }
             }
-            .background(Theme.gradientBackground())
+            .background(Theme.gradientBackground(for: colorScheme))
             .navigationTitle("健康记录")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         Button(action: refreshData) {
                             Image(systemName: "arrow.clockwise")
-                                .foregroundColor(Theme.accent)
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                         }
                         NavigationLink(destination: ProfileView(healthStore: healthStore)) {
                             Image(systemName: "person.circle")
-                                .foregroundColor(Theme.accent)
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                         }
                     }
                 }
@@ -114,9 +68,54 @@ struct DashboardView: View {
     }
 }
 
+private struct LatestMetricsGrid: View {
+    @ObservedObject var healthStore: HealthStore
+    @Environment(\.colorScheme) var colorScheme
+    
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+    
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 15) {
+            ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
+                NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
+                    MetricCard(type: type, record: healthStore.getLatestRecord(for: type))
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                }
+            }
+        }
+    }
+}
+
+private struct StatusIcon {
+    let icon: String
+    let color: Color
+}
+
 struct MetricCard: View {
+    @Environment(\.colorScheme) var colorScheme
     let type: HealthRecord.RecordType
     let record: HealthRecord?
+    
+    private func getStatusIcon(type: HealthRecord.RecordType, value: Double) -> StatusIcon {
+        let isNormal: Bool
+        
+        if type == .steps {
+            isNormal = value >= (type.normalRange.min ?? 0)
+        } else if type == .sleep {
+            isNormal = value >= (type.normalRange.min ?? 0) && 
+                      value <= (type.normalRange.max ?? Double.infinity)
+        } else {
+            return StatusIcon(icon: "", color: .clear)
+        }
+        
+        return StatusIcon(
+            icon: isNormal ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
+            color: isNormal ? .green : .red
+        )
+    }
     
     private var iconName: String {
         switch type {
@@ -141,7 +140,7 @@ struct MetricCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: iconName)
-                    .foregroundColor(Theme.accent)
+                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                 Text(type.displayName)
                     .font(.headline)
             }
@@ -164,20 +163,18 @@ struct MetricCard: View {
                 HStack {
                     Text(record.date.formatted(.dateTime.day().month()))
                         .font(.caption)
-                        .foregroundColor(Theme.secondaryText)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     
                     if type == .steps || type == .sleep {
-                        let isNormal = type == .steps ? 
-                            record.value >= (type.normalRange.min ?? 0) :
-                            (record.value >= (type.normalRange.min ?? 0) && record.value <= (type.normalRange.max ?? Double.infinity))
-                        Image(systemName: isNormal ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                            .foregroundColor(isNormal ? .green : .red)
+                        let statusIcon = getStatusIcon(type: type, value: record.value)
+                        Image(systemName: statusIcon.icon)
+                            .foregroundColor(statusIcon.color)
                     }
                 }
             } else {
                 Text("暂无数据")
                     .font(.title2)
-                    .foregroundColor(Theme.secondaryText)
+                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -185,19 +182,70 @@ struct MetricCard: View {
     }
 }
 
-struct NoteSummaryCard: View {
+private struct RecentNotesSection: View {
+    @ObservedObject var healthStore: HealthStore
+    @Binding var showingAddNote: Bool
+    @Binding var noteToEdit: DailyNote?
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("最近笔记")
+                    .font(.headline)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                Spacer()
+                NavigationLink {
+                    AllNotesView(healthStore: healthStore)
+                } label: {
+                    Text("查看全部")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                }
+            }
+            
+            let recentNotes = healthStore.dailyNotes
+                .sorted(by: { $0.date > $1.date })
+                .prefix(5)
+            
+            if recentNotes.isEmpty {
+                Text("暂无笔记")
+                    .font(.subheadline)
+                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(recentNotes) { note in
+                    NavigationLink {
+                        NoteDetailView(healthStore: healthStore, note: note)
+                    } label: {
+                        NoteSummaryCard(note: note)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            Button(action: { showingAddNote = true }) {
+                Label("添加笔记", systemImage: "plus.circle.fill")
+            }
+            .modernButton()
+        }
+    }
+}
+
+private struct NoteSummaryCard: View {
+    @Environment(\.colorScheme) var colorScheme
     let note: DailyNote
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(note.content)
                 .lineLimit(3)
-                .foregroundColor(Theme.text)
+                .foregroundColor(Theme.color(.text, scheme: colorScheme))
             
             HStack {
                 Text(note.date.formatted(.dateTime.month().day().hour().minute()))
                     .font(.caption)
-                    .foregroundColor(Theme.secondaryText)
+                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                 
                 if !note.tags.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -207,8 +255,8 @@ struct NoteSummaryCard: View {
                                     .font(.caption)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Theme.accent.opacity(0.2))
-                                    .foregroundColor(Theme.text)
+                                    .background(Theme.color(.accent, scheme: colorScheme).opacity(0.2))
+                                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
                                     .cornerRadius(8)
                             }
                         }
@@ -221,6 +269,7 @@ struct NoteSummaryCard: View {
 }
 
 struct AllNotesView: View {
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var healthStore: HealthStore
     @State private var showingAddNote = false
     @State private var noteToEdit: DailyNote? = nil
@@ -229,7 +278,7 @@ struct AllNotesView: View {
         List {
             ForEach(healthStore.dailyNotes.sorted(by: { $0.date > $1.date })) { note in
                 NoteSummaryCard(note: note)
-                    .listRowBackground(Theme.background)
+                    .listRowBackground(Theme.color(.background, scheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         editNote(note)
@@ -250,7 +299,7 @@ struct AllNotesView: View {
                     }
             }
         }
-        .background(Theme.background)
+        .background(Theme.color(.background, scheme: colorScheme))
         .navigationTitle("全部笔记")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -271,21 +320,22 @@ struct AllNotesView: View {
 }
 
 struct DailyRecommendationsView: View {
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var healthStore: HealthStore
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("今日建议")
                 .font(.headline)
-                .foregroundColor(Theme.text)
+                .foregroundColor(Theme.color(.text, scheme: colorScheme))
             
             // 这里可以根据用户的健康数据生成个性化建议
             ForEach(getDailyRecommendations(), id: \.self) { recommendation in
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Theme.accent)
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                     Text(recommendation)
-                        .foregroundColor(Theme.text)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 }
             }
         }

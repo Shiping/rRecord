@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NoteDetailView: View {
     @ObservedObject var healthStore: HealthStore
+    @Environment(\.colorScheme) var colorScheme
     let note: DailyNote
     @State private var isEditing = false
     @State private var editedContent: String
@@ -21,29 +22,29 @@ struct NoteDetailView: View {
                 if isEditing {
                     TextEditor(text: $editedContent)
                         .font(.body)
-                        .foregroundColor(Theme.text)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
                         .frame(minHeight: 100)
                         .padding(.vertical)
                 } else {
                     Text(note.content)
                         .font(.body)
-                        .foregroundColor(Theme.text)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
                         .padding(.vertical)
                 }
                 
                 // Date
                 HStack {
                     Image(systemName: "calendar")
-                        .foregroundColor(Theme.secondaryText)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     Text(note.date.formatted(.dateTime.year().month().day().hour().minute()))
                         .font(.subheadline)
-                        .foregroundColor(Theme.secondaryText)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                 }
                 
                 // Tags
                 Text("标签")
                     .font(.headline)
-                    .foregroundColor(Theme.text)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
                     .padding(.top)
                 
                 if isEditing {
@@ -54,7 +55,7 @@ struct NoteDetailView: View {
                         }
                     ))
                     .textFieldStyle(.roundedBorder)
-                    .foregroundColor(Theme.text)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 } else if !note.tags.isEmpty {
                     FlowLayout(spacing: 8) {
                         ForEach(note.tags, id: \.self) { tag in
@@ -62,8 +63,8 @@ struct NoteDetailView: View {
                                 .font(.subheadline)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Theme.accent.opacity(0.2))
-                                .foregroundColor(Theme.text)
+                                .background(Theme.color(.accent, scheme: colorScheme).opacity(0.2))
+                                .foregroundColor(Theme.color(.text, scheme: colorScheme))
                                 .cornerRadius(8)
                         }
                     }
@@ -72,7 +73,7 @@ struct NoteDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
-        .background(Theme.background)
+        .background(Theme.color(.background, scheme: colorScheme))
         .navigationTitle("笔记详情")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -90,6 +91,7 @@ struct NoteDetailView: View {
                     isEditing.toggle()
                 }) {
                     Text(isEditing ? "完成" : "编辑")
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                 }
             }
         }
@@ -179,5 +181,19 @@ struct FlowLayout: Layout {
             self.subview = subview
             self.size = size
         }
+    }
+}
+
+#Preview {
+    NavigationView {
+        NoteDetailView(
+            healthStore: HealthStore(),
+            note: DailyNote(
+                id: UUID(),
+                date: Date(),
+                content: "Test note",
+                tags: ["测试", "标签"]
+            )
+        )
     }
 }

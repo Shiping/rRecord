@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AddNoteView: View {
     @ObservedObject var healthStore: HealthStore
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
     var noteToEdit: DailyNote?
     
@@ -71,7 +72,7 @@ struct AddNoteView: View {
                         if !newTag.isEmpty {
                             Button(action: addCustomTag) {
                                 Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(Theme.accent)
+                                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                             }
                         }
                     }
@@ -144,6 +145,7 @@ struct AddNoteView: View {
 }
 
 struct TagButton: View {
+    @Environment(\.colorScheme) var colorScheme
     let tag: String
     let isSelected: Bool
     let action: () -> Void
@@ -153,8 +155,8 @@ struct TagButton: View {
             Text(tag)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(isSelected ? Theme.accent : Theme.cardBackground)
-                .foregroundColor(isSelected ? .white : Theme.text)
+                .background(isSelected ? Theme.color(.accent, scheme: colorScheme) : Theme.color(.cardBackground, scheme: colorScheme))
+                .foregroundColor(isSelected ? .white : Theme.color(.text, scheme: colorScheme))
                 .cornerRadius(15)
         }
     }

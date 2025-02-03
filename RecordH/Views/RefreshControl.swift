@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RefreshControl: View {
     @Binding var isRefreshing: Bool
+    @Environment(\.colorScheme) var colorScheme
     let action: () -> Void
     
     var body: some View {
@@ -18,11 +19,15 @@ struct RefreshControl: View {
                 Spacer()
                 if isRefreshing {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.color(.accent, scheme: colorScheme)))
                 }
                 Spacer()
             }
         }
         .frame(height: 50)
     }
+}
+
+#Preview {
+    RefreshControl(isRefreshing: .constant(true)) {}
 }
