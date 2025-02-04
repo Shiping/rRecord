@@ -31,6 +31,10 @@ struct HealthRecord: Identifiable, Codable {
         case steps
         case sleep
         case flightsClimbed
+        case activeEnergy
+        case restingEnergy
+        case heartRate
+        case distance
         
         var normalRange: (min: Double?, max: Double?) {
             switch self {
@@ -50,6 +54,14 @@ struct HealthRecord: Identifiable, Codable {
                 return (6, 8) // 6-8小时
             case .flightsClimbed:
                 return (10, nil) // 每日建议至少10层
+            case .activeEnergy:
+                return (150, nil) // 最低150千卡
+            case .restingEnergy:
+                return (1200, 2400) // 基础代谢范围
+            case .heartRate:
+                return (60, 100) // 正常心率范围
+            case .distance:
+                return (3, nil) // 建议每天步行3公里以上
             }
         }
         
@@ -72,6 +84,10 @@ struct HealthRecord: Identifiable, Codable {
             case .steps: return "步"
             case .sleep: return "小时"
             case .flightsClimbed: return "层"
+            case .activeEnergy: return "千卡"
+            case .restingEnergy: return "千卡"
+            case .heartRate: return "次/分"
+            case .distance: return "公里"
             }
         }
         
@@ -85,6 +101,10 @@ struct HealthRecord: Identifiable, Codable {
             case .steps: return "步数"
             case .sleep: return "睡眠时间"
             case .flightsClimbed: return "爬楼梯"
+            case .activeEnergy: return "活动能量"
+            case .restingEnergy: return "基础能量"
+            case .heartRate: return "心率"
+            case .distance: return "运动距离"
             }
         }
         

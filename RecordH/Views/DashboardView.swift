@@ -102,14 +102,20 @@ struct MetricCard: View {
     private func getStatusIcon(type: HealthRecord.RecordType, value: Double) -> StatusIcon {
         let isNormal: Bool
         
-        if type == .steps {
+        switch type {
+        case .steps:
             isNormal = value >= (type.normalRange.min ?? 0)
-        } else if type == .sleep {
-            // Convert seconds to hours for range check
-            let hoursValue = value / 3600
-            isNormal = hoursValue >= (type.normalRange.min ?? 0) && 
-                      hoursValue <= (type.normalRange.max ?? Double.infinity)
-        } else {
+        case .sleep:
+            isNormal = value >= (type.normalRange.min ?? 0) && 
+                      value <= (type.normalRange.max ?? Double.infinity)
+        case .activeEnergy:
+            isNormal = value >= (type.normalRange.min ?? 0)
+        case .heartRate:
+            isNormal = value >= (type.normalRange.min ?? 0) && 
+                      value <= (type.normalRange.max ?? Double.infinity)
+        case .distance:
+            isNormal = value >= (type.normalRange.min ?? 0)
+        default:
             return StatusIcon(icon: "", color: .clear)
         }
         
@@ -137,6 +143,14 @@ struct MetricCard: View {
             return "chart.line.uptrend.xyaxis"
         case .uricAcid:
             return "cross.vial.fill"
+        case .activeEnergy:
+            return "flame.fill"
+        case .restingEnergy:
+            return "battery.100"
+        case .heartRate:
+            return "waveform.path.ecg"
+        case .distance:
+            return "figure.walk.motion"
         }
     }
     
@@ -168,7 +182,8 @@ struct MetricCard: View {
                         .font(.caption)
                         .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     
-                    if type == .steps || type == .sleep || type == .flightsClimbed {
+                    if type == .steps || type == .sleep || type == .flightsClimbed ||
+                       type == .activeEnergy || type == .heartRate || type == .distance {
                         let statusIcon = getStatusIcon(type: type, value: record.value)
                         Image(systemName: statusIcon.icon)
                             .foregroundColor(statusIcon.color)
