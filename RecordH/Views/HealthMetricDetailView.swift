@@ -80,6 +80,15 @@ struct HealthMetricDetailView: View {
         .background(Theme.gradientBackground(for: colorScheme))
         .navigationTitle(type.displayName)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                HStack {
+                    Image(systemName: "heart.text.square.fill")
+                        .foregroundColor(.red)
+                    Text("来自HealthKit")
+                        .font(.caption)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showingAddRecord = true }) {
                     Image(systemName: "plus.circle.fill")

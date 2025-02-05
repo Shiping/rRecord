@@ -78,11 +78,13 @@ private struct LatestMetricsGrid: View {
     ]
     
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 15) {
-            ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
-                NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
-                    MetricCard(type: type, record: healthStore.getLatestRecord(for: type))
-                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+        VStack(spacing: 10) {
+            LazyVGrid(columns: columns, spacing: 15) {
+                ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
+                    NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
+                        MetricCard(type: type, record: healthStore.getLatestRecord(for: type))
+                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                    }
                 }
             }
         }
@@ -200,7 +202,7 @@ struct MetricCard: View {
     }
 }
 
-private struct RecentNotesSection: View {
+struct RecentNotesSection: View {
     @ObservedObject var healthStore: HealthStore
     @Binding var showingAddNote: Bool
     @Binding var noteToEdit: DailyNote?
@@ -245,7 +247,6 @@ private struct RecentNotesSection: View {
                     .buttonStyle(.plain)
                 }
             }
-            
         }
     }
 }

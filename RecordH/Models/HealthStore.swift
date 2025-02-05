@@ -12,7 +12,45 @@ class HealthStore: ObservableObject {
     
     init() {
         loadData()
-        requestAuthorization()
+    }
+    
+    func requestInitialAuthorization(completion: @escaping (Bool) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            completion(false)
+            return
+        }
+        
+        guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
+              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed),
+              let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
+              let restingEnergyType = HKObjectType.quantityType(forIdentifier: .basalEnergyBurned),
+              let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate),
+              let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+            completion(false)
+            return
+        }
+        
+        let typesToRead: Set<HKSampleType> = [
+            stepCountType,
+            sleepType,
+            flightsClimbedType,
+            activeEnergyType,
+            restingEnergyType,
+            heartRateType,
+            distanceType
+        ]
+        
+        healthStore.requestAuthorization(toShare: [], read: typesToRead) { success, error in
+            if success {
+                print("授权成功")
+                self.refreshHealthData()
+                completion(true)
+            } else {
+                print("授权失败: \(String(describing: error?.localizedDescription))")
+                completion(false)
+            }
+        }
     }
     
     private func loadData() {
@@ -143,37 +181,6 @@ class HealthStore: ObservableObject {
     }
     
     // MARK: - Private HealthKit Methods
-    
-    private func requestAuthorization() {
-        guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
-              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-              let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed),
-              let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
-              let restingEnergyType = HKObjectType.quantityType(forIdentifier: .basalEnergyBurned),
-              let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate),
-              let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else {
-            return
-        }
-        
-        let typesToRead: Set<HKSampleType> = [
-            stepCountType,
-            sleepType,
-            flightsClimbedType,
-            activeEnergyType,
-            restingEnergyType,
-            heartRateType,
-            distanceType
-        ]
-        
-        healthStore.requestAuthorization(toShare: [], read: typesToRead) { success, error in
-            if success {
-                print("授权成功")
-                self.refreshHealthData()
-            } else {
-                print("授权失败: \(String(describing: error?.localizedDescription))")
-            }
-        }
-    }
     
     private func fetchTodayStepCount() {
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }

@@ -31,6 +31,9 @@ enum ThemeColor {
             
         case (.accent, _):
             return .blue
+            
+        @unknown default:
+            return .blue // Default fallback color
         }
     }
 }
