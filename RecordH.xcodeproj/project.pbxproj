@@ -407,6 +407,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = hRecord;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问您的健康数据以展示步数和睡眠时长";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要访问您的健康数据以展示步数和睡眠时长";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -441,6 +442,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = hRecord;
 INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问您的健康数据以展示步数和睡眠时长";
 INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要访问您的健康数据以展示步数和睡眠时长";
 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
