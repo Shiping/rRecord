@@ -1,4 +1,5 @@
 import SwiftUI
+import HealthKit
 
 struct ProfileView: View {
     @ObservedObject var healthStore: HealthStore
@@ -10,6 +11,7 @@ struct ProfileView: View {
     @State private var birthDate = Date()
     @State private var gender = UserProfile.Gender.other
     @State private var showingAlert = false
+    @State private var isSyncing = false
     
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
@@ -20,6 +22,40 @@ struct ProfileView: View {
     
     var body: some View {
         Form {
+            Section(header: Text("HealthKit 集成")) {
+                HStack {
+                    Image(systemName: "heart.text.square.fill")
+                        .foregroundColor(.red)
+                    Text("HealthKit 状态")
+                    Spacer()
+                    Text(HKHealthStore.isHealthDataAvailable() ? "已连接" : "未连接")
+                        .foregroundColor(HKHealthStore.isHealthDataAvailable() ? .green : .red)
+                }
+                
+                Button(action: {
+                    isSyncing = true
+                    healthStore.refreshHealthData()
+                    // Add delay to show sync animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        isSyncing = false
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .rotationEffect(.degrees(isSyncing ? 360 : 0))
+                            .animation(isSyncing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isSyncing)
+                        Text("同步 HealthKit 数据")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Theme.color(.accent, scheme: themeManager.colorScheme ?? .light))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(!HKHealthStore.isHealthDataAvailable())
+            }
+
             Section(header: Text("基本信息")) {
                 TextField("姓名", text: $name)
                 
