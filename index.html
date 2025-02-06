@@ -86,6 +86,14 @@
             transform: translateY(-5px);
         }
 
+        .feature-card h2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            margin: 0.5rem 0;
+        }
+
         .qa-section {
             margin: 4rem 0;
         }
@@ -186,12 +194,24 @@
         .btn:hover {
             background-color: var(--secondary-color);
         }
+
+        .bilingual {
+            margin-bottom: 1rem;
+        }
+
+        .en {
+            margin-bottom: 0.3rem;
+        }
+
+        .cn {
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>Welcome to hRecord</h1>
-        <p>Your Personal Health Tracking Companion</p>
+        <h1>Welcome to hRecord<br>欢迎使用 hRecord</h1>
+        <p>Your Personal Health Tracking Companion<br>您的个人健康追踪伴侣</p>
     </header>
 
     <div class="privacy-banner">
@@ -205,66 +225,88 @@
     <div class="container">
         <section class="features">
             <div class="feature-card">
-                <h2>Health Dashboard</h2>
-                <p>Track and visualize your health metrics in real-time with our intuitive dashboard. Monitor your progress and stay informed about your health journey.</p>
+                <div class="bilingual">
+                    <h2 class="en">Health Dashboard</h2>
+                    <h2 class="cn">健康仪表盘</h2>
+                </div>
+                <p class="en">Track and visualize your health metrics in real-time with our intuitive dashboard.</p>
+                <p class="cn">使用我们直观的仪表盘实时追踪和可视化您的健康指标。</p>
             </div>
             <div class="feature-card">
-                <h2>Detailed Metrics</h2>
-                <p>Access detailed health metric information and historical data. Make informed decisions about your health with comprehensive analytics.</p>
+                <div class="bilingual">
+                    <h2 class="en">Detailed Metrics</h2>
+                    <h2 class="cn">详细指标</h2>
+                </div>
+                <p class="en">Access detailed health metric information and historical data for comprehensive analytics.</p>
+                <p class="cn">访问详细的健康指标信息和历史数据，进行全面分析。</p>
             </div>
             <div class="feature-card">
-                <h2>Personal Notes</h2>
-                <p>Add personal notes to your health records. Keep track of important observations, medications, or any health-related information you want to remember.</p>
+                <div class="bilingual">
+                    <h2 class="en">Personal Notes</h2>
+                    <h2 class="cn">个人笔记</h2>
+                </div>
+                <p class="en">Add personal notes to your health records to track observations and thoughts.</p>
+                <p class="cn">为您的健康记录添加个人笔记，记录观察和想法。</p>
             </div>
         </section>
 
         <section class="qa-section">
-            <h2>Frequently Asked Questions</h2>
+            <div class="bilingual">
+                <h2 class="en">Frequently Asked Questions</h2>
+                <h2 class="cn">常见问题解答</h2>
+            </div>
             <div class="qa-container">
                 <div class="qa-item">
-                    <h3>如何开始使用 hRecord？</h3>
-                    <p>安装 hRecord 后，您可以直接进入主界面。在隐私提示中允许健康数据访问权限后，应用就可以开始追踪您的健康指标了。</p>
+                    <h3>How to start using hRecord? / 如何开始使用 hRecord？</h3>
+                    <p class="en">After installing hRecord, you can directly enter the main interface. Once you allow health data access in the privacy prompt, the app can start tracking your health metrics.</p>
+                    <p class="cn">安装 hRecord 后，您可以直接进入主界面。在隐私提示中允许健康数据访问权限后，应用就可以开始追踪您的健康指标了。</p>
                 </div>
                 <div class="qa-item">
-                    <h3>hRecord 支持哪些健康指标？</h3>
-                    <p>目前支持多种健康指标的追踪，包括步数、心率、睡眠质量等。您可以在仪表盘中查看所有可用的指标类型。</p>
+                    <h3>What health metrics does hRecord support? / hRecord 支持哪些健康指标？</h3>
+                    <p class="en">Currently supports tracking various health metrics including step count, heart rate, sleep quality, and more. You can view all available metric types in the dashboard.</p>
+                    <p class="cn">目前支持多种健康指标的追踪，包括步数、心率、睡眠质量等。您可以在仪表盘中查看所有可用的指标类型。</p>
                 </div>
                 <div class="qa-item">
-                    <h3>如何添加健康笔记？</h3>
-                    <p>在应用中点击"添加笔记"按钮，您可以记录任何与健康相关的观察或想法。这些笔记会与您的健康数据一起保存。</p>
+                    <h3>How to add health notes? / 如何添加健康笔记？</h3>
+                    <p class="en">Click the "Add Note" button in the app to record any health-related observations or thoughts. These notes will be saved along with your health data.</p>
+                    <p class="cn">在应用中点击"添加笔记"按钮，您可以记录任何与健康相关的观察或想法。这些笔记会与您的健康数据一起保存。</p>
                 </div>
                 <div class="qa-item">
-                    <h3>数据安全性如何？</h3>
-                    <p>您的所有健康数据都存储在本地设备上，hRecord 不会将任何数据上传到云端或与第三方共享。详细信息请查看我们的隐私政策。</p>
-                </div>
-                <div class="qa-item">
-                    <h3>为什么我的健康数据没有及时更新？</h3>
-                    <p>健康数据更新可能需要一些时间。请确保您已经授予 hRecord 访问健康数据的权限，并且设备的健康应用正在正常运行。如果问题持续，请尝试重启应用。</p>
+                    <h3>How secure is my data? / 数据安全性如何？</h3>
+                    <p class="en">All your health data is stored locally on your device. hRecord does not upload any data to the cloud or share with third parties.</p>
+                    <p class="cn">您的所有健康数据都存储在本地设备上，hRecord 不会将任何数据上传到云端或与第三方共享。</p>
                 </div>
             </div>
         </section>
 
         <section class="cta-section">
-            <h2>还有其他问题？</h2>
-            <p>如果您在上面没有找到答案，请随时通过以下表单联系我们。我们会添加新的常见问题解答来帮助其他用户。</p>
+            <div class="bilingual">
+                <h2 class="en">Have More Questions?</h2>
+                <h2 class="cn">还有其他问题？</h2>
+            </div>
+            <p class="en">If you can't find your answer above, please contact us using the form below.</p>
+            <p class="cn">如果您在上面没有找到答案，请通过以下表单联系我们。</p>
         </section>
 
         <section class="contact-form">
-            <h2>联系我们</h2>
+            <div class="bilingual">
+                <h2 class="en">Contact Us</h2>
+                <h2 class="cn">联系我们</h2>
+            </div>
             <form id="contactForm">
                 <div class="form-group">
-                    <label for="name">姓名</label>
+                    <label>Name / 姓名</label>
                     <input type="text" id="name" name="name" required>
                 </div>
                 <div class="form-group">
-                    <label for="email">邮箱</label>
+                    <label>Email / 邮箱</label>
                     <input type="email" id="email" name="email" required>
                 </div>
                 <div class="form-group">
-                    <label for="message">您的问题</label>
+                    <label>Message / 您的问题</label>
                     <textarea id="message" name="message" rows="5" required></textarea>
                 </div>
-                <button type="submit" class="btn">发送问题</button>
+                <button type="submit" class="btn">Send Message / 发送问题</button>
             </form>
         </section>
     </div>
@@ -277,8 +319,7 @@
     <script>
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            // In a real implementation, this would send the form data to a server
-            alert('感谢您的提问！我们会尽快回复并更新到常见问题列表中。');
+            alert('Thank you for your message! We will get back to you soon.\n感谢您的提问！我们会尽快回复。');
             this.reset();
         });
     </script>
