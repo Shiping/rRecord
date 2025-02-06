@@ -41,14 +41,23 @@ class HealthStore: ObservableObject {
             distanceType
         ]
         
-        healthStore.requestAuthorization(toShare: [], read: typesToRead) { success, error in
-            if success {
-                print("授权成功")
-                self.refreshHealthData()
-                completion(true)
-            } else {
-                print("授权失败: \(String(describing: error?.localizedDescription))")
-                completion(false)
+        healthStore.requestAuthorization(toShare: [], read: typesToRead) { [weak self] success, error in
+            guard let self = self else {
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                if success {
+                    print("授权成功")
+                    self.refreshHealthData()
+                    completion(true)
+                } else {
+                    print("授权失败: \(String(describing: error?.localizedDescription))")
+                    completion(false)
+                }
             }
         }
     }
