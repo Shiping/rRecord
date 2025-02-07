@@ -13,6 +13,7 @@ class ThemeManager: ObservableObject {
     }
     
     init() {
+    print("Initializing ThemeManager")
         updateTheme()
     }
     

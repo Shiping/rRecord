@@ -55,10 +55,15 @@ struct DashboardView: View {
     
     private func refreshData() {
         isRefreshing = true
-        healthStore.refreshHealthData()
-        // Give some time for the refresh animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isRefreshing = false
+        
+        // Delay the heavy operation slightly to let UI become responsive
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            healthStore.refreshHealthData()
+            
+            // Give some time for the refresh animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                isRefreshing = false
+            }
         }
     }
     
@@ -72,22 +77,48 @@ private struct LatestMetricsGrid: View {
     @ObservedObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
     
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
+    private var columns: [GridItem] {
+        // Use 3 columns on iPad in landscape
+        if horizontalSizeClass == .regular {
+            return [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ]
+        }
+        // Use 2 columns on iPhone or iPad in portrait
+        return [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ]
+    }
     
     var body: some View {
         VStack(spacing: 10) {
             LazyVGrid(columns: columns, spacing: 15) {
                 ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
                     NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
-                        MetricCard(type: type, record: healthStore.getLatestRecord(for: type))
+                        MetricCardWrapper(type: type, healthStore: healthStore)
                             .foregroundColor(Theme.color(.text, scheme: colorScheme))
                     }
                 }
             }
         }
+        // Add some padding for iPad
+        .padding(horizontalSizeClass == .regular ? 20 : 0)
+    }
+}
+
+// Wrapper to optimize rendering and reduce view updates
+private struct MetricCardWrapper: View {
+    let type: HealthRecord.RecordType
+    @ObservedObject var healthStore: HealthStore
+    
+    var body: some View {
+        let record = healthStore.getLatestRecord(for: type)
+        MetricCard(type: type, record: record)
     }
 }
 

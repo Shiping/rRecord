@@ -11,12 +11,15 @@ class HealthStore: ObservableObject {
     private let healthStore = HKHealthStore()
     
     init() {
-        loadData()
+        print("Initializing HealthStore")
+        // Defer loadData until after authorization
     }
     
     func requestInitialAuthorization(completion: @escaping (Bool) -> Void) {
+        print("Starting authorization request")
         guard HKHealthStore.isHealthDataAvailable() else {
-            completion(false)
+            print("Health data not available")
+            print("Failed to create health data types")
             return
         }
         
@@ -41,9 +44,11 @@ class HealthStore: ObservableObject {
             distanceType
         ]
         
+        print("Requesting authorization for health data types")
         healthStore.requestAuthorization(toShare: [], read: typesToRead) { [weak self] success, error in
             guard let self = self else {
                 DispatchQueue.main.async {
+                    print("Authorization failed: self is nil")
                     completion(false)
                 }
                 return
@@ -51,11 +56,12 @@ class HealthStore: ObservableObject {
             
             DispatchQueue.main.async {
                 if success {
-                    print("授权成功")
-                    self.refreshHealthData()
+                    print("Authorization successful")
+                    self.loadData() // Load saved data first
+                    self.queueHealthDataFetch() // Then queue health data fetches
                     completion(true)
                 } else {
-                    print("授权失败: \(String(describing: error?.localizedDescription))")
+                    print("Authorization failed: \(String(describing: error?.localizedDescription))")
                     completion(false)
                 }
             }
@@ -178,15 +184,37 @@ class HealthStore: ObservableObject {
         }
     }
     
+    // Queue health data fetches with delay between each
+    private func queueHealthDataFetch() {
+        let fetchQueue = DispatchQueue(label: "com.recordh.healthfetch")
+        let delay: TimeInterval = 0.5 // Half second delay between fetches
+        
+        fetchQueue.async {
+            self.fetchTodayStepCount()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchLastNightSleep()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchTodayFlightsClimbed()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchTodayActiveEnergy()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchTodayRestingEnergy()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchLatestHeartRate()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchTodayDistance()
+        }
+    }
+    
     // Public refresh method
     func refreshHealthData() {
-        fetchTodayStepCount()
-        fetchLastNightSleep()
-        fetchTodayFlightsClimbed()
-        fetchTodayActiveEnergy()
-        fetchTodayRestingEnergy()
-        fetchLatestHeartRate()
-        fetchTodayDistance()
+        queueHealthDataFetch()
     }
     
     // MARK: - Private HealthKit Methods

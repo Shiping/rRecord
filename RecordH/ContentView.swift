@@ -18,10 +18,14 @@ struct ContentView: View {
                 DashboardView(healthStore: healthStore)
                     .preferredColorScheme(themeManager.colorScheme)
                     .environmentObject(themeManager)
+                    // Fix NavigationView style for iPad
+                    .navigationViewStyle(StackNavigationViewStyle())
             } else {
                 WelcomeView(healthStore: healthStore, hasGrantedPermission: $hasGrantedPermission)
                     .preferredColorScheme(themeManager.colorScheme)
                     .environmentObject(themeManager)
+                    // Fix NavigationView style for iPad
+                    .navigationViewStyle(StackNavigationViewStyle())
             }
         }
     }
