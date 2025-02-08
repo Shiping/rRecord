@@ -1,28 +1,64 @@
 import Foundation
 
-struct UserProfile: Codable {
-    var height: Double
-    var birthDate: Date
-    var gender: Gender
-    var name: String
+public struct UserProfile: Codable {
+    public var height: Double
+    public var birthDate: Date
+    public var gender: Gender
+    public var name: String
+    public var aiSettings: AISettings
     
-    enum Gender: String, Codable {
+    public init(height: Double, birthDate: Date, gender: Gender, name: String, aiSettings: AISettings = AISettings()) {
+        self.height = height
+        self.birthDate = birthDate
+        self.gender = gender
+        self.name = name
+        self.aiSettings = aiSettings
+    }
+    
+    public struct AISettings: Codable {
+        public var deepseekApiKey: String
+        public var deepseekBaseURL: String
+        public var deepseekModel: String
+        public var enabled: Bool
+        
+        public init(deepseekApiKey: String = "", 
+             deepseekBaseURL: String = "https://api.deepseek.com/v1",
+             deepseekModel: String = "deepseek-chat",
+             enabled: Bool = false) {
+            self.deepseekApiKey = deepseekApiKey
+            self.deepseekBaseURL = deepseekBaseURL
+            self.deepseekModel = deepseekModel
+            self.enabled = enabled
+        }
+    }
+    
+    public enum Gender: String, Codable {
         case male
         case female
         case other
     }
 }
 
-struct HealthRecord: Identifiable, Codable {
-    let id: UUID
-    let date: Date
-    let type: RecordType
-    let value: Double
-    var secondaryValue: Double? // For blood pressure's diastolic value
-    let unit: String
-    var note: String?
+public struct HealthRecord: Identifiable, Codable {
+    public let id: UUID
+    public let date: Date
+    public let type: RecordType
+    public let value: Double
+    public var secondaryValue: Double? // For blood pressure's diastolic value
+    public let unit: String
+    public var note: String?
     
-    enum RecordType: String, Codable, CaseIterable {
+    public init(id: UUID = UUID(), date: Date, type: RecordType, value: Double, secondaryValue: Double? = nil, unit: String, note: String? = nil) {
+        self.id = id
+        self.date = date
+        self.type = type
+        self.value = value
+        self.secondaryValue = secondaryValue
+        self.unit = unit
+        self.note = note
+    }
+    
+    public enum RecordType: String, Codable, CaseIterable {
         case weight
         case bloodSugar
         case bloodPressure
@@ -38,7 +74,7 @@ struct HealthRecord: Identifiable, Codable {
         case bloodOxygen
         case bodyFat
         
-        var normalRange: (min: Double?, max: Double?) {
+        public var normalRange: (min: Double?, max: Double?) {
             switch self {
             case .weight:
                 return (18.5, 23.9) // BMI
@@ -71,7 +107,7 @@ struct HealthRecord: Identifiable, Codable {
             }
         }
         
-        var secondaryNormalRange: (min: Double?, max: Double?)? {
+        public var secondaryNormalRange: (min: Double?, max: Double?)? {
             switch self {
             case .bloodPressure:
                 return (60, 80) // Diastolic
@@ -80,7 +116,7 @@ struct HealthRecord: Identifiable, Codable {
             }
         }
         
-        var unit: String {
+        public var unit: String {
             switch self {
             case .weight: return "kg"
             case .bloodSugar: return "mmol/L"
@@ -99,7 +135,7 @@ struct HealthRecord: Identifiable, Codable {
             }
         }
         
-        var displayName: String {
+        public var displayName: String {
             switch self {
             case .weight: return "体重"
             case .bloodSugar: return "血糖"
@@ -118,18 +154,18 @@ struct HealthRecord: Identifiable, Codable {
             }
         }
         
-        var needsSecondaryValue: Bool {
+        public var needsSecondaryValue: Bool {
             self == .bloodPressure
         }
         
-        var valueLabel: String {
+        public var valueLabel: String {
             switch self {
             case .bloodPressure: return "收缩压"
             default: return displayName
             }
         }
         
-        var secondaryValueLabel: String? {
+        public var secondaryValueLabel: String? {
             switch self {
             case .bloodPressure: return "舒张压"
             default: return nil
@@ -138,9 +174,30 @@ struct HealthRecord: Identifiable, Codable {
     }
 }
 
-struct DailyNote: Identifiable, Codable {
-    let id: UUID
-    let date: Date
-    var content: String
-    var tags: [String]
+public struct DailyNote: Identifiable, Codable {
+    public let id: UUID
+    public let date: Date
+    public var content: String
+    public var tags: [String]
+    public var category: Category
+    
+    public enum Category: String, Codable {
+        case general
+        case aiAdvice
+        
+        public var displayName: String {
+            switch self {
+            case .general: return "一般记录"
+            case .aiAdvice: return "AI建议"
+            }
+        }
+    }
+    
+    public init(id: UUID = UUID(), date: Date = Date(), content: String, tags: [String] = [], category: Category = .general) {
+        self.id = id
+        self.date = date
+        self.content = content
+        self.tags = tags
+        self.category = category
+    }
 }

@@ -390,41 +390,60 @@ struct AllNotesView: View {
 struct DailyRecommendationsView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject var healthStore: HealthStore
+    @State private var isGeneratingAdvice = false
+    
+    var todaysAdvice: DailyNote? {
+        healthStore.dailyNotes
+            .filter { Calendar.current.isDateInToday($0.date) && $0.category == .aiAdvice }
+            .first
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("今日建议")
-                .font(.headline)
-                .foregroundColor(Theme.color(.text, scheme: colorScheme))
-            
-            // 这里可以根据用户的健康数据生成个性化建议
-            ForEach(getDailyRecommendations(), id: \.self) { recommendation in
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
+            HStack {
+                Text("今日建议")
+                    .font(.headline)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                Spacer()
+                Button(action: generateAdvice) {
+                    Image(systemName: "sparkles")
                         .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                    Text(recommendation)
-                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 }
+                .disabled(isGeneratingAdvice)
+            }
+            
+            if let advice = todaysAdvice {
+                Text(advice.content)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                    .font(.body)
+            } else if isGeneratingAdvice {
+                VStack {
+                    ProgressView()
+                    Text("正在生成建议...")
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                        .font(.subheadline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+            } else {
+                Text("点击刷新按钮获取今日AI建议")
+                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                    .font(.subheadline)
             }
         }
         .frame(maxWidth: .infinity)
         .modernCard()
     }
     
-    private func getDailyRecommendations() -> [String] {
-        var recommendations = [String]()
-        
-        // 根据最新的体重数据提供建议
-        if healthStore.getLatestRecord(for: .weight) != nil {
-            // 这里可以添加更复杂的逻辑来生成建议
-            recommendations.append("建议每日步行30分钟")
+    private func generateAdvice() {
+        isGeneratingAdvice = true
+        healthStore.generateHealthAdvice { advice in
+            isGeneratingAdvice = false
+            if advice == nil {
+                // 如果生成失败，可以在这里添加错误处理逻辑
+                print("Failed to generate health advice")
+            }
         }
-        
-        // 添加一些通用建议
-        recommendations.append("保持充足睡眠，建议7-8小时")
-        recommendations.append("多喝水，每日建议2000ml")
-        
-        return recommendations
     }
 }
 

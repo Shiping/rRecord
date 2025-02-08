@@ -12,8 +12,10 @@ struct ProfileView: View {
     @State private var gender = UserProfile.Gender.other
     @State private var showingAlert = false
     @State private var isSyncing = false
-    @State private var isICloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") // 添加 iCloud 同步开关状态
-    @State private var isManualSyncing = false // 添加手动同步状态
+    @State private var isICloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
+    @State private var isManualSyncing = false
+    @State private var isAIEnabled = false
+    @State private var apiKey = ""
 
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
@@ -24,7 +26,26 @@ struct ProfileView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("iCloud 同步"), footer: Text("启用 iCloud 同步后，您的数据将在 iCloud 中备份，并在重新安装应用后自动恢复。")) { // 添加 iCloud 同步 Section 和提示信息
+            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。")) {
+                Toggle("启用 AI 健康建议", isOn: $isAIEnabled)
+                
+                if isAIEnabled {
+                    SecureField("Deepseek API 密钥", text: $apiKey)
+                    if apiKey.isEmpty {
+                        Text("请输入有效的 API 密钥")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    
+                    TextField("Deepseek API Base URL", text: $baseURL)
+                        .textCase(.lowercase)
+                    
+                    TextField("Deepseek Model Name", text: $modelName)
+                        .textCase(.lowercase)
+                }
+            }
+
+            Section(header: Text("iCloud 同步"), footer: Text("启用 iCloud 同步后，您的数据将在 iCloud 中备份，并在重新安装应用后自动恢复。")) {
                 Toggle("启用 iCloud 同步", isOn: $isICloudSyncEnabled)
                     .onChange(of: isICloudSyncEnabled) { newValue in
                         UserDefaults.standard.set(newValue, forKey: "iCloudSyncEnabled")
@@ -32,13 +53,13 @@ struct ProfileView: View {
 
                 Button(action: {
                     isManualSyncing = true
-                    healthStore.manualSyncToICloud { success in // 调用 HealthStore 的手动同步方法
+                    healthStore.manualSyncToICloud { success in
                         DispatchQueue.main.async {
                             isManualSyncing = false
                             if success {
-                                print("手动 iCloud 同步成功") // 可以在此处添加成功提示
+                                print("手动 iCloud 同步成功")
                             } else {
-                                print("手动 iCloud 同步失败") // 可以在此处添加失败提示
+                                print("手动 iCloud 同步失败")
                             }
                         }
                     }
@@ -56,7 +77,7 @@ struct ProfileView: View {
                     .cornerRadius(10)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .disabled(!isICloudSyncEnabled || isManualSyncing) // 在未启用 iCloud 或正在同步时禁用按钮
+                .disabled(!isICloudSyncEnabled || isManualSyncing)
             }
 
             Section(header: Text("HealthKit 集成")) {
@@ -72,7 +93,6 @@ struct ProfileView: View {
                 Button(action: {
                     isSyncing = true
                     healthStore.refreshHealthData()
-                    // Add delay to show sync animation
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         isSyncing = false
                     }
@@ -138,12 +158,22 @@ struct ProfileView: View {
         }
     }
     
+    @State private var baseURL = ""
+    @State private var modelName = ""
+
     private func loadProfile() {
         if let profile = healthStore.userProfile {
             name = profile.name
             height = String(format: "%.1f", profile.height)
             birthDate = profile.birthDate
             gender = profile.gender
+            isAIEnabled = profile.aiSettings.enabled
+            apiKey = profile.aiSettings.deepseekApiKey
+            baseURL = profile.aiSettings.deepseekBaseURL
+            modelName = profile.aiSettings.deepseekModel
+        } else {
+            baseURL = "https://api.deepseek.com/v1"
+            modelName = "deepseek-chat"
         }
     }
     
@@ -154,12 +184,19 @@ struct ProfileView: View {
             showingAlert = true
             return
         }
+        let aiSettings = UserProfile.AISettings(
+            deepseekApiKey: apiKey,
+            deepseekBaseURL: baseURL.isEmpty ? "https://api.deepseek.com/v1" : baseURL,
+            deepseekModel: modelName.isEmpty ? "deepseek-chat" : modelName,
+            enabled: isAIEnabled
+        )
         
         let profile = UserProfile(
             height: heightValue,
             birthDate: birthDate,
             gender: gender,
-            name: name
+            name: name,
+            aiSettings: aiSettings
         )
         
         healthStore.updateProfile(profile)
