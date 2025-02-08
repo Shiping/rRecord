@@ -6,7 +6,7 @@ enum MCPError: Error {
 }
 
 @available(macOS 10.13, iOS 15.0, *)
-class HealthAdvisorProvider { // Renamed class
+class HealthAdvisorProvider {
     struct Configuration {
         weak var healthStore: HealthStore?
     }
@@ -17,12 +17,13 @@ class HealthAdvisorProvider { // Renamed class
         self.config = config
     }
 
-    private func generatePrompt(healthData: [String: Any], userDescription: String?) -> String {
+    private func generatePrompt(healthData: [String: Any], userDescription: String?, userAge: Int?, userGender: String?) -> String {
         var parts: [String] = []
         var descriptionPart: [String] = []
+        var demographicPart: [String] = []
 
         if let steps = healthData["steps"] as? Int {
-            parts.append("今日步数: \(steps)步")
+            parts.append("今日步数: \(steps)步 (当日数据)")
         }
 
         if let sleep = healthData["sleep"] as? [String: Any],
@@ -32,130 +33,184 @@ class HealthAdvisorProvider { // Renamed class
         }
 
         if let heartRate = healthData["heartRate"] as? Int {
-            parts.append("最近心率: \(heartRate)次/分钟")
+            parts.append("最近心率: \(heartRate)次/分钟 (当日数据)")
         }
 
         if let activeEnergy = healthData["activeEnergy"] as? Double {
-            parts.append("今日活动消耗: \(activeEnergy)千卡")
+            parts.append("今日活动消耗: \(activeEnergy)千卡 (当日数据)")
         }
 
         if let restingEnergy = healthData["restingEnergy"] as? Double {
-            parts.append("今日静息消耗: \(restingEnergy)千卡")
+            parts.append("今日静息消耗: \(restingEnergy)千卡 (当日数据)")
         }
 
         if let distance = healthData["distance"] as? Double {
-            parts.append("今日运动距离: \(distance)公里")
+            parts.append("今日运动距离: \(distance)公里 (当日数据)")
         }
 
         if let bloodOxygen = healthData["bloodOxygen"] as? Double {
-            parts.append("血氧饱和度: \(bloodOxygen)%")
+            parts.append("血氧饱和度: \(bloodOxygen)% (当日数据)")
         }
 
         if let bodyFat = healthData["bodyFat"] as? Double {
             parts.append("体脂率: \(bodyFat)%")
         }
-        
+        if let flightsClimbed = healthData["flightsClimbed"] as? Int {
+            parts.append("今日爬楼: \(flightsClimbed) 层 (当日数据)")
+        }
+        if let weight = healthData["weight"] as? Double {
+            parts.append("今日体重: \(weight) 公斤 (当日数据)")
+        }
+        if let bloodPressure = healthData["bloodPressure"] as? [String: Any],
+           let systolic = bloodPressure["systolic"] as? Double,
+           let diastolic = bloodPressure["diastolic"] as? Double {
+            parts.append("今日血压: \(Int(systolic))/\(Int(diastolic)) mmHg (当日数据)")
+        }
+        if let bloodSugar = healthData["bloodSugar"] as? Double {
+            parts.append("今日血糖: \(bloodSugar) mmol/L (当日数据)")
+        }
+        if let bloodLipids = healthData["bloodLipids"] as? Double {
+            parts.append("今日血脂: \(bloodLipids) mg/dL")
+        }
+        if let uricAcid = healthData["uricAcid"] as? Double {
+            parts.append("今日尿酸: \(uricAcid) umol/L")
+        }
+        if let bmi = healthData["bmi"] as? Double {
+            parts.append("最近BMI: \(String(format: "%.1f", bmi))")
+        }
+
+        if let userAge = userAge {
+            demographicPart.append("用户年龄: \(userAge) 岁")
+        }
+        if let userGender = userGender {
+            demographicPart.append("用户性别: \(userGender)")
+        }
+
         if let userDescription = userDescription, !userDescription.isEmpty {
             descriptionPart.append("用户描述: \(userDescription)")
         }
 
         let prompt = """
-        基于用户的以下健康数据\(descriptionPart.isEmpty ? "" : "和用户描述")，请提供具体的健康建议：
-        \(parts.joined(separator: "\n"))
-        \(descriptionPart.isEmpty ? "" : "\n" + descriptionPart.joined(separator: "\n"))
+        请基于以下用户\(demographicPart.isEmpty ? "" : "年龄和性别等")信息，并重点考虑用户当日的健康数据\(descriptionPart.isEmpty ? "" : "和用户描述")，给出个性化的健康建议：
+        \(demographicPart.isEmpty ? "" : demographicPart.joined(separator: "\\n") + "\\n")
+        \(parts.joined(separator: "\\n"))\(descriptionPart.isEmpty ? "" : "\\n" + descriptionPart.joined(separator: "\\n"))
 
         \n
-        请从以下几个方面给出建议：
-        1. 运动建议
-        2. 睡眠建议
-        3. 饮食建议
-        4. 今日特别注意事项
+        请从以下几个方面给出建议：\n
+        1. 运动建议 (结合今日步数、活动消耗、运动距离、爬楼等数据，尤其关注当日数据)\n
+        2. 睡眠建议 (结合最近睡眠时长)\n
+        3. 饮食建议 (结合体重、体脂率、血糖血脂尿酸、BMI等数据)\n
+        4. 今日特别注意事项 (综合所有数据，给出今日需要特别关注的健康问题)
 
         建议要具体可执行，并针对用户数据的特点给出个性化建议。
         """
         return prompt
     }
 
-    func getHealthAdvice(healthData: [String: Any], userDescription: String?, completion: @escaping (Result<String, Error>) -> Void) {
+    func getHealthAdvice(healthData: [String: Any], userDescription: String?, userAge: Int?, userGender: String?, completion: @escaping (Result<String, Error>) -> Void) {
+        // 检查AI功能是否启用
         guard let aiSettings = config.healthStore?.userProfile?.aiSettings, aiSettings.enabled else {
             completion(.failure(MCPError.networkError("AI功能未启用或未配置")))
             return
         }
 
-        guard !aiSettings.deepseekApiKey.isEmpty else {
+        guard let aiSettings = config.healthStore?.userProfile?.aiSettings, !aiSettings.deepseekApiKey.isEmpty else {
             completion(.failure(MCPError.networkError("Deepseek API 密钥未配置")))
             return
         }
 
-        let prompt = generatePrompt(healthData: healthData, userDescription: userDescription)
-        let baseURL = aiSettings.deepseekBaseURL.isEmpty ? "https://api.deepseek.com/v1" : aiSettings.deepseekBaseURL
-        let model = aiSettings.deepseekModel.isEmpty ? "deepseek-chat" : aiSettings.deepseekModel
-
-        guard let url = URL(string: "\(baseURL)/chat/completions") else {
-            completion(.failure(MCPError.networkError("无效的API URL")))
-            return
+        // 构建符合 MCP tool 要求的健康数据格式
+        var formattedHealthData: [String: Any] = [:]
+        
+        if let steps = healthData["steps"] as? Int {
+            formattedHealthData["steps"] = steps
+        }
+        if let sleep = healthData["sleep"] as? [String: Any],
+           let hours = sleep["hours"] as? Int,
+           let minutes = sleep["minutes"] as? Int {
+            formattedHealthData["sleep"] = ["hours": hours, "minutes": minutes]
+        }
+        if let heartRate = healthData["heartRate"] as? Int {
+            formattedHealthData["heartRate"] = heartRate
+        }
+        if let activeEnergy = healthData["activeEnergy"] as? Double {
+            formattedHealthData["activeEnergy"] = activeEnergy
+        }
+        if let restingEnergy = healthData["restingEnergy"] as? Double {
+            formattedHealthData["restingEnergy"] = restingEnergy
+        }
+        if let distance = healthData["distance"] as? Double {
+            formattedHealthData["distance"] = distance
+        }
+        if let bloodOxygen = healthData["bloodOxygen"] as? Double {
+            formattedHealthData["bloodOxygen"] = bloodOxygen
+        }
+        if let bodyFat = healthData["bodyFat"] as? Double {
+            formattedHealthData["bodyFat"] = bodyFat
         }
 
+        let url = URL(string: "\(config.healthStore?.userProfile?.aiSettings.deepseekBaseURL ?? "https://api.deepseek.com/v1")/chat/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.addValue("Bearer \(aiSettings.deepseekApiKey)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
+        request.setValue("Bearer \(config.healthStore?.userProfile?.aiSettings.deepseekApiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let prompt = generatePrompt(healthData: healthData, userDescription: userDescription, userAge: userAge, userGender: userGender)
         let requestBody: [String: Any] = [
-            "model": model,
+            "model": config.healthStore?.userProfile?.aiSettings.deepseekModel ?? "deepseek-chat",
             "messages": [
-                ["role": "system", "content": "你是一个专业的健康顾问，基于用户的健康数据提供个性化的建议。建议应该具体、可操作、并考虑到用户的各项健康指标。请从运动建议、睡眠建议、饮食建议和今日特别注意事项四个方面来提供建议。"],
-                ["role": "user", "content": prompt]
+                [
+                    "role": "system",
+                    "content": "你是一个专业的健康顾问，基于用户的健康数据提供个性化的建议。建议应该具体、可操作、并考虑到用户的各项健康指标。请从运动建议、睡眠建议、饮食建议和今日特别注意事项四个方面来提供建议。"
+                ],
+                [
+                    "role": "user",
+                    "content": prompt
+                ]
             ],
             "temperature": 0.7,
             "max_tokens": 1500
         ]
-
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
-            completion(.failure(MCPError.networkError("请求体序列化失败")))
+            completion(.failure(MCPError.serverError("请求数据序列化失败")))
             return
         }
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(MCPError.networkError("网络请求错误: \(error.localizedDescription)")))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                completion(.failure(MCPError.serverError("API请求失败，状态码: \(statusCode)")))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(MCPError.serverError("API 响应数据为空")))
-                return
-            }
-
-            do {
-                let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                if let choices = jsonResponse?["choices"] as? [[String: Any]],
-                   let firstChoice = choices.first,
-                   let message = firstChoice["message"] as? [String: Any],
-                   let content = message["content"] as? String {
-                    completion(.success(content))
-                } else if let errorDetail = jsonResponse?["error"] as? [String: Any], let errorMessage = errorDetail["message"] as? String {
-                    completion(.failure(MCPError.serverError("API 错误: \(errorMessage)")))
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(.failure(MCPError.networkError(error.localizedDescription)))
+                    return
                 }
-                 else {
-                    completion(.failure(MCPError.serverError("无效的API响应格式")))
+                
+                guard let data = data else {
+                    completion(.failure(MCPError.networkError("无响应数据")))
+                    return
                 }
-            } catch {
-                completion(.failure(MCPError.serverError("JSON 解析失败: \(error.localizedDescription)")))
+                
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let choices = json["choices"] as? [[String: Any]],
+                       let firstChoice = choices.first,
+                       let message = firstChoice["message"] as? [String: Any],
+                       let content = message["content"] as? String {
+                        completion(.success(content))
+                    } else {
+                        completion(.failure(MCPError.serverError("解析响应失败")))
+                    }
+                } catch {
+                    completion(.failure(MCPError.serverError("解析响应失败：\(error.localizedDescription)")))
+                }
             }
-        }.resume()
+        }
+        
+        task.resume()
     }
 
-
-    func useHealthAdvisor(healthData: [String: Any], userDescription: String?, completion: @escaping (Result<String, Error>) -> Void) { // Modified function
-        getHealthAdvice(healthData: healthData, userDescription: userDescription, completion: completion) // Call the Swift implementation
+    func useHealthAdvisor(healthData: [String: Any], userDescription: String?, userAge: Int?, userGender: String?, completion: @escaping (Result<String, Error>) -> Void) {
+        getHealthAdvice(healthData: healthData, userDescription: userDescription, userAge: userAge, userGender: userGender, completion: completion)
     }
 }

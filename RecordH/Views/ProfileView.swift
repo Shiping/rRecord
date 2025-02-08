@@ -57,7 +57,7 @@ struct ProfileView: View {
 
             Section(header: Text("iCloud 同步"), footer: Text("启用 iCloud 同步后，您的数据将在 iCloud 中备份，并在重新安装应用后自动恢复。")) {
                 Toggle("启用 iCloud 同步", isOn: $isICloudSyncEnabled)
-                    .onChange(of: isICloudSyncEnabled) { newValue in
+                    .onChange(of: isICloudSyncEnabled) { oldValue, newValue in
                         UserDefaults.standard.set(newValue, forKey: "iCloudSyncEnabled")
                     }
 

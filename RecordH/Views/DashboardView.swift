@@ -63,6 +63,9 @@ struct DashboardView: View {
     private func refreshData() {
         isRefreshing = true
         
+        // Access userProfile to trigger SwiftUI update?
+        _ = healthStore.userProfile
+        
         // Delay the heavy operation slightly to let UI become responsive
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             healthStore.refreshHealthData()
@@ -421,7 +424,7 @@ struct DailyRecommendationsView: View {
                 .padding(.bottom, 10)
 
             if let content = adviceContent { // 使用 adviceContent
-                var processedContent = content.replacingOccurrences(of: "\n", with: "  \n")
+                let processedContent = content.replacingOccurrences(of: "\n", with: "  \n")
                 if let attributedString = try? AttributedString(markdown: processedContent) {
                     Text(attributedString)
                         .lineSpacing(8)

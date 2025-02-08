@@ -248,8 +248,7 @@ public class HealthStore: ObservableObject {
     }
     
     @objc public dynamic func generateHealthAdvice(userDescription: String?, completion: @escaping (String?) -> Void) {
-        guard let provider = healthAdvisorProvider, // updated provider name
-              userProfile?.aiSettings.enabled == true else {
+        guard userProfile?.aiSettings.enabled == true else {
             print("AI建议功能未启用或未配置")
             completion(nil)
             return
@@ -263,7 +262,24 @@ public class HealthStore: ObservableObject {
         
         let healthData = getTodayHealthData()
         
-        provider.useHealthAdvisor(healthData: healthData, userDescription: userDescription) { result in // useHealthAdvisor is still valid
+        // Calculate age from birthDate
+        let userAge: Int?
+        if let profile = userProfile {
+            let calendar = Calendar.current
+            userAge = calendar.dateComponents([.year], from: profile.birthDate, to: Date()).year
+        } else {
+            userAge = nil
+        }
+        
+        // Gender is non-optional in UserProfile
+        let userGender = userProfile?.gender.rawValue
+        
+        guard let provider = healthAdvisorProvider else {
+            completion(nil)
+            return
+        }
+        
+        provider.useHealthAdvisor(healthData: healthData, userDescription: userDescription, userAge: userAge, userGender: userGender) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let advice):
@@ -307,6 +323,33 @@ public class HealthStore: ObservableObject {
         if let bodyFatRecord = getLatestRecord(for: .bodyFat) {
             data["bodyFat"] = bodyFatRecord.value
         }
+        if let flightsClimbedRecord = getLatestRecord(for: .flightsClimbed) {
+            data["flightsClimbed"] = flightsClimbedRecord.value
+        }
+        if let weightRecord = getLatestRecord(for: .weight) {
+            data["weight"] = weightRecord.value
+        }
+        if let bloodPressureRecord = getLatestRecord(for: .bloodPressure) {
+            data["bloodPressure"] = ["systolic": bloodPressureRecord.value, "diastolic": bloodPressureRecord.secondaryValue]
+        }
+        if let bloodSugarRecord = getLatestRecord(for: .bloodSugar) {
+            data["bloodSugar"] = bloodSugarRecord.value
+        }
+        if let bloodLipidsRecord = getLatestRecord(for: .bloodLipids) {
+            data["bloodLipids"] = bloodLipidsRecord.value
+        }
+        if let uricAcidRecord = getLatestRecord(for: .uricAcid) {
+            data["uricAcid"] = uricAcidRecord.value
+        }
+        
+        // Calculate BMI
+        if let weightRecord = getLatestRecord(for: .weight),
+           let profile = userProfile,
+           profile.height > 0 {
+            let bmi = weightRecord.value / ((profile.height / 100) * (profile.height / 100))
+            data["bmi"] = bmi
+        }
+        
         return data
     }
     

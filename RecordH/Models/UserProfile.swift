@@ -21,13 +21,13 @@ public struct UserProfile: Codable {
         public var deepseekModel: String
         public var enabled: Bool
         
-        public init(deepseekApiKey: String = "", 
+        public init(deepseekApiKey: String = "",
              deepseekBaseURL: String = "https://api.deepseek.com/v1",
              deepseekModel: String = "deepseek-chat",
              enabled: Bool = false) {
             self.deepseekApiKey = deepseekApiKey
-            self.deepseekBaseURL = deepseekBaseURL
-            self.deepseekModel = deepseekModel
+            self.deepseekBaseURL = "https://api.deepseek.com/v1"
+            self.deepseekModel = "deepseek-chat"
             self.enabled = enabled
         }
     }
