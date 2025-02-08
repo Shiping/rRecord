@@ -391,29 +391,30 @@ struct DailyRecommendationsView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject var healthStore: HealthStore
     @State private var isGeneratingAdvice = false
-    
+    @State private var adviceContent: String? = nil
+
     var todaysAdvice: DailyNote? {
         healthStore.dailyNotes
             .filter { Calendar.current.isDateInToday($0.date) && $0.category == .aiAdvice }
             .first
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             HStack {
-                Text("今日建议")
+                Text("AI健康建议")
                     .font(.headline)
                     .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 Spacer()
                 Button(action: generateAdvice) {
-                    Image(systemName: "sparkles")
+                    Image(systemName: "arrow.clockwise")
                         .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                 }
                 .disabled(isGeneratingAdvice)
             }
-            
-            if let advice = todaysAdvice {
-                Text(advice.content)
+
+            if let content = adviceContent { // 使用 adviceContent
+                Text(content)
                     .foregroundColor(Theme.color(.text, scheme: colorScheme))
                     .font(.body)
             } else if isGeneratingAdvice {
@@ -426,7 +427,7 @@ struct DailyRecommendationsView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
             } else {
-                Text("点击刷新按钮获取今日AI建议")
+                Text("点击刷新按钮获取AI健康建议")
                     .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     .font(.subheadline)
             }
@@ -434,14 +435,18 @@ struct DailyRecommendationsView: View {
         .frame(maxWidth: .infinity)
         .modernCard()
     }
-    
+
     private func generateAdvice() {
         isGeneratingAdvice = true
+        adviceContent = nil // 点击按钮时先清空 adviceContent
         healthStore.generateHealthAdvice { advice in
             isGeneratingAdvice = false
-            if advice == nil {
+            if let advice = advice {
+                adviceContent = advice // 获取到建议后更新 adviceContent
+            } else {
                 // 如果生成失败，可以在这里添加错误处理逻辑
                 print("Failed to generate health advice")
+                adviceContent = "生成建议失败，请稍后重试" // 提示用户生成失败
             }
         }
     }

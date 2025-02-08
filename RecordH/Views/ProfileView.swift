@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var isManualSyncing = false
     @State private var isAIEnabled = false
     @State private var apiKey = ""
+    @State private var apiKeyVisible = false
 
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
@@ -26,22 +27,31 @@ struct ProfileView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。")) {
-                Toggle("启用 AI 健康建议", isOn: $isAIEnabled)
+            Section(header: Text("外观设置")) {
+                Picker("主题", selection: $themeManager.currentTheme) {
+                    Text("系统").tag("system")
+                    Text("浅色").tag("light")
+                    Text("深色").tag("dark")
+                }
+            }
+
+            Section(header: Text("基本信息")) {
+                TextField("姓名", text: $name)
                 
-                if isAIEnabled {
-                    SecureField("Deepseek API 密钥", text: $apiKey)
-                    if apiKey.isEmpty {
-                        Text("请输入有效的 API 密钥")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                    
-                    TextField("Deepseek API Base URL", text: $baseURL)
-                        .textCase(.lowercase)
-                    
-                    TextField("Deepseek Model Name", text: $modelName)
-                        .textCase(.lowercase)
+                TextField("身高 (cm)", text: $height)
+                    .keyboardType(.decimalPad)
+                
+                DatePicker(
+                    "出生日期",
+                    selection: $birthDate,
+                    in: dateRange,
+                    displayedComponents: .date
+                )
+                
+                Picker("性别", selection: $gender) {
+                    Text("男").tag(UserProfile.Gender.male)
+                    Text("女").tag(UserProfile.Gender.female)
+                    Text("其他").tag(UserProfile.Gender.other)
                 }
             }
 
@@ -112,32 +122,41 @@ struct ProfileView: View {
                 .buttonStyle(PlainButtonStyle())
                 .disabled(!HKHealthStore.isHealthDataAvailable())
             }
-
-            Section(header: Text("基本信息")) {
-                TextField("姓名", text: $name)
-                
-                TextField("身高 (cm)", text: $height)
-                    .keyboardType(.decimalPad)
-                
-                DatePicker(
-                    "出生日期",
-                    selection: $birthDate,
-                    in: dateRange,
-                    displayedComponents: .date
-                )
-                
-                Picker("性别", selection: $gender) {
-                    Text("男").tag(UserProfile.Gender.male)
-                    Text("女").tag(UserProfile.Gender.female)
-                    Text("其他").tag(UserProfile.Gender.other)
-                }
-            }
             
-            Section(header: Text("外观设置")) {
-                Picker("主题", selection: $themeManager.currentTheme) {
-                    Text("系统").tag("system")
-                    Text("浅色").tag("light")
-                    Text("深色").tag("dark")
+            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。")) {
+                Toggle("启用 AI 健康建议", isOn: $isAIEnabled)
+                
+                if isAIEnabled {
+                    HStack {
+                        if apiKeyVisible {
+                            TextField("Deepseek API 密钥", text: $apiKey)
+                        } else {
+                            SecureField("Deepseek API 密钥", text: $apiKey)
+                        }
+                        
+                        Button(action: {
+                            apiKeyVisible.toggle()
+                        }) {
+                            Image(systemName: apiKeyVisible ? "eye.slash.fill" : "eye.fill")
+                        }
+                    }
+                    if apiKey.isEmpty {
+                        Text("请输入有效的 API 密钥")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    
+                    VStack(alignment: .leading) {
+                        Text("Deepseek API Base URL")
+                        TextField("Deepseek API Base URL", text: $baseURL)
+                            .textCase(.lowercase)
+                    }
+                    
+                    VStack(alignment: .leading) {
+                        Text("Deepseek Model Name")
+                        TextField("Deepseek Model Name", text: $modelName)
+                            .textCase(.lowercase)
+                    }
                 }
             }
 
