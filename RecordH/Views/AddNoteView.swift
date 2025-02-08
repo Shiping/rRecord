@@ -10,6 +10,8 @@ struct AddNoteView: View {
     @State private var selectedTags: Set<String> = []
     @State private var newTag: String = ""
     @State private var selectedDate = Date()
+    @State private var textEditorHeight: CGFloat = 100 // 默认高度
+    @State private var isDragging = false
     
     private let commonTags = ["运动", "饮食", "睡眠", "心情", "灵感", "工作"]
     
@@ -33,19 +35,64 @@ struct AddNoteView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("记录时间")) {
+            List {
+                Section {
                     DatePicker(
                         "选择日期时间",
                         selection: $selectedDate,
                         in: dateRange,
                         displayedComponents: [.date, .hourAndMinute]
                     )
+                } header: {
+                    Text("记录时间")
                 }
                 
-                Section(header: Text("记录你的想法")) {
-                    TextEditor(text: $noteContent)
-                        .frame(minHeight: 100)
+                Section {
+                    VStack(spacing: 0) {
+                        TextEditor(text: $noteContent)
+                            .frame(height: textEditorHeight)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemBackground))
+                            .animation(.easeInOut, value: textEditorHeight)
+                        
+                        Rectangle()
+                            .fill(Color(.systemGray4))
+                            .frame(height: 30)
+                            .overlay(
+                                Image(systemName: "line.horizontal.3")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 20, weight: .bold))
+                            )
+                            .onTapGesture {}
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        isDragging = true
+                                        let newHeight = textEditorHeight + value.translation.height
+                                        textEditorHeight = max(100, newHeight)
+                                    }
+                                    .onEnded { _ in
+                                        isDragging = false
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                            if !isDragging {
+                                                withAnimation {
+                                                    textEditorHeight = 100
+                                                }
+                                            }
+                                        }
+                                    }
+                            )
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .padding(.horizontal)
+                } header: {
+                    Text("记录你的想法")
                 }
                 
                 Section(header: Text("添加标签")) {

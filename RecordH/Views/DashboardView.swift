@@ -10,29 +10,37 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                RefreshControl(isRefreshing: $isRefreshing) {
-                    refreshData()
-                }
-                VStack(spacing: 20) {
-                    // Latest Metrics Grid
-                    LatestMetricsGrid(healthStore: healthStore)
-                        .padding(.horizontal)
-                    
-                    // Daily Notes Section
-                    RecentNotesSection(
-                        healthStore: healthStore,
-                        showingAddNote: $showingAddNote,
-                        noteToEdit: $noteToEdit
-                    )
-                    .padding()
-                    
-                    // Daily Recommendations
-                    DailyRecommendationsView(healthStore: healthStore)
+             ScrollView {
+                 VStack { // Wrap content in VStack
+                     RefreshControl(isRefreshing: $isRefreshing) {
+                         refreshData()
+                     }
+                     VStack(spacing: 20) {
+                        // Latest Metrics Grid
+                        LatestMetricsGrid(healthStore: healthStore)
+                            .padding(.horizontal)
+                        
+                        // Daily Notes Section
+                        RecentNotesSection(
+                            healthStore: healthStore,
+                            showingAddNote: $showingAddNote,
+                            noteToEdit: $noteToEdit
+                        )
                         .padding()
-                }
-            }
-            .background(Theme.gradientBackground(for: colorScheme))
+                        
+                        // Daily Recommendations
+                        DailyRecommendationsView(healthStore: healthStore)
+                            .padding()
+                    }
+              }
+              .simultaneousGesture(
+                 DragGesture()
+                     .onEnded { _ in
+                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                     }
+              )
+             }
+             .background(Theme.gradientBackground(for: colorScheme))
             .navigationTitle("健康记录")
             .onAppear {
                 if !hasInitiallyLoaded {
@@ -424,18 +432,11 @@ struct DailyRecommendationsView: View {
                 .padding(.bottom, 10)
 
             if let content = adviceContent { // 使用 adviceContent
-                let processedContent = content.replacingOccurrences(of: "\n", with: "  \n")
-                if let attributedString = try? AttributedString(markdown: processedContent) {
-                    Text(attributedString)
-                        .lineSpacing(8)
-                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                        .font(.body)
-                } else {
-                    Text("Error rendering advice")
-                        .foregroundColor(.red)
-                        .font(.body)
-                }
-                
+                    Text(content) // 使用 Text 显示建议内容
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading) // 撑满容器宽度，左对齐
+                        .padding(.horizontal)
+
                 // Display health data summary and user description
                 if let summary = healthDataSummary, !summary.isEmpty || !userDescription.isEmpty {
                     VStack(alignment: .leading) {
@@ -479,7 +480,6 @@ struct DailyRecommendationsView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .modernCard()
     }
 
     private func generateAdvice() {
