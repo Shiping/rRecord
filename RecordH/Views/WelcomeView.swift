@@ -5,7 +5,7 @@ struct WelcomeView: View {
     @ObservedObject var healthStore: HealthStore
     @Binding var hasGrantedPermission: Bool
     @State private var isAuthorizationInProgress = false
-    @State private var error: String? = nil
+    @State private var showError = false
     
     var body: some View {
         VStack(spacing: 30) {
@@ -20,12 +20,12 @@ struct WelcomeView: View {
                 .bold()
             
             VStack(alignment: .leading, spacing: 20) {
-            Text("健康数据跟踪")
-                .font(.title2)
-                .bold()
+                Text("健康数据跟踪")
+                    .font(.title2)
+                    .bold()
                 
-            Text("此功能将帮助您跟踪以下健康指标：")
-                .font(.body)
+                Text("此功能将帮助您跟踪以下健康指标：")
+                    .font(.body)
                 
                 VStack(alignment: .leading, spacing: 10) {
                     PermissionRow(icon: "figure.walk", text: "步数")
@@ -57,7 +57,7 @@ struct WelcomeView: View {
             .disabled(isAuthorizationInProgress)
             .padding(.horizontal)
             
-            if let error = error {
+            if showError {
                 Text("需要健康数据访问权限才能使用此功能。\n您可以在设置中修改权限。")
                     .foregroundColor(.red)
                     .font(.caption)
@@ -75,7 +75,7 @@ struct WelcomeView: View {
     
     private func requestHealthKitPermission() {
         isAuthorizationInProgress = true
-        error = nil
+        showError = false
         
         DispatchQueue.main.async {
             healthStore.requestInitialAuthorization { success in
@@ -84,7 +84,7 @@ struct WelcomeView: View {
                     if success {
                         hasGrantedPermission = true
                     } else {
-                        error = "若要启用此功能，请在系统设置中允许访问健康数据"
+                        showError = true
                     }
                 }
             }
