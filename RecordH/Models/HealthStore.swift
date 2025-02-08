@@ -12,39 +12,230 @@ public class HealthStore: ObservableObject {
     private var healthAdvisorProvider: HealthAdvisorProvider?
     private let fileManager = FileManager.default
     private var documentsDirectory: URL {
-        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0] // 修改为 cachesDirectory
     }
-    
+
     private var profileURL: URL {
         documentsDirectory.appendingPathComponent("userProfile.json")
     }
-    
+
     private var recordsURL: URL {
         documentsDirectory.appendingPathComponent("healthRecords.json")
     }
-    
+
     private var notesURL: URL {
         documentsDirectory.appendingPathComponent("dailyNotes.json")
     }
-    
+
     public init() {
         print("Initializing HealthStore")
         let config = HealthAdvisorProvider.Configuration(healthStore: self)
         healthAdvisorProvider = HealthAdvisorProvider(config: config)
-        
+
         createDirectoryIfNeeded()
         migrateDataIfNeeded()
         loadData()
     }
+
+    func updateSelectedAIConfiguration(_ configId: UUID?) {
+        if var profile = userProfile {
+            profile.selectedAIConfigurationId = configId
+            userProfile = profile
+            // saveData() // Comment out saveData for now
+        }
+    }
+
+    @objc public dynamic func generateHealthAdvice(userDescription: String?, completion: @escaping (String?) -> Void) {
+        guard let selectedConfigId = userProfile?.selectedAIConfigurationId,
+              let config = userProfile?.aiSettings.first(where: { $0.id == selectedConfigId }),
+              config.enabled else {
+            completion("请先在个人资料中启用 AI 配置")
+            return
+        }
+
+        guard let provider = healthAdvisorProvider else {
+            completion("AI 助手未正确初始化")
+            return
+        }
+        
+        // 从健康记录中获取最新的各项数据
+        var healthData: [String: Any] = [:]
+        
+        // 获取用户年龄
+        var userAge: Int? = nil
+        if let birthDate = userProfile?.birthDate {
+            let calendar = Calendar.current
+            userAge = calendar.dateComponents([.year], from: birthDate, to: Date()).year
+        }
+        
+        // 获取用户性别
+        let userGender = userProfile?.gender.rawValue
+        
+        // 将各项健康数据添加到字典中
+        for recordType in HealthRecord.RecordType.allCases {
+            if let record = getLatestRecord(for: recordType) {
+                switch recordType {
+                case .steps:
+                    healthData["steps"] = Int(record.value)
+                case .sleep:
+                    healthData["sleep"] = [
+                        "hours": Int(record.value),
+                        "minutes": Int(record.secondaryValue ?? 0)
+                    ]
+                case .heartRate:
+                    healthData["heartRate"] = Int(record.value)
+                case .activeEnergy:
+                    healthData["activeEnergy"] = record.value
+                case .restingEnergy:
+                    healthData["restingEnergy"] = record.value
+                case .distance:
+                    healthData["distance"] = record.value
+                case .bloodOxygen:
+                    healthData["bloodOxygen"] = record.value
+                case .bodyFat:
+                    healthData["bodyFat"] = record.value
+                case .flightsClimbed:
+                    healthData["flightsClimbed"] = Int(record.value)
+                case .weight:
+                    healthData["weight"] = record.value
+                case .bloodPressure:
+                    healthData["bloodPressure"] = [
+                        "systolic": record.value,
+                        "diastolic": record.secondaryValue ?? 0
+                    ]
+                case .bloodSugar:
+                    healthData["bloodSugar"] = record.value
+                case .bloodLipids:
+                    healthData["bloodLipids"] = record.value
+                case .uricAcid:
+                    healthData["uricAcid"] = record.value
+                }
+            }
+        }
+        
+        provider.getHealthAdvice(
+            healthData: healthData,
+            userDescription: userDescription,
+            userAge: userAge,
+            userGender: userGender
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let advice):
+                    completion(advice)
+                case .failure(let error):
+                    completion("生成建议失败: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
     
     private func migrateDataIfNeeded() {}
-    
+
     private func createDirectoryIfNeeded() {
         do {
             try fileManager.createDirectory(at: documentsDirectory, withIntermediateDirectories: true, attributes: nil)
         } catch {
             print("Error creating documents directory: \(error.localizedDescription)")
         }
+    }
+
+    private func saveData() {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+
+        do {
+            if let profile = userProfile {
+                let profileData = try encoder.encode(profile)
+                try profileData.write(to: profileURL, options: .atomic)
+            }
+
+            let recordsData = try encoder.encode(healthRecords)
+            try recordsData.write(to: recordsURL, options: .atomic)
+
+            let notesData = try encoder.encode(dailyNotes)
+            try notesData.write(to: notesURL, options: .atomic)
+
+            if isICloudSyncEnabled() {
+                let store = NSUbiquitousKeyValueStore.default
+
+                if let profile = userProfile,
+                   let profileData = try? encoder.encode(profile) {
+                    store.set(profileData, forKey: "userProfile")
+                }
+
+                if let recordsData = try? encoder.encode(healthRecords) {
+                    store.set(recordsData, forKey: "healthRecords")
+                }
+
+                if let notesData = try? encoder.encode(dailyNotes) {
+                    store.set(notesData, forKey: "dailyNotes")
+                }
+
+                store.synchronize()
+            }
+        } catch {
+            print("Error saving data: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadData() {
+        let decoder = JSONDecoder()
+
+        if let profileData = try? Data(contentsOf: profileURL),
+           let profile = try? decoder.decode(UserProfile.self, from: profileData) {
+            userProfile = profile
+        }
+
+        if let recordsData = try? Data(contentsOf: recordsURL),
+           let records = try? decoder.decode([HealthRecord].self, from: recordsData) {
+            healthRecords = records
+        }
+
+        if let notesData = try? Data(contentsOf: notesURL),
+           let notes = try? decoder.decode([DailyNote].self, from: notesData) {
+            dailyNotes = notes
+        }
+
+        if isICloudSyncEnabled() {
+            let store = NSUbiquitousKeyValueStore.default
+
+            if let profileData = store.data(forKey: "userProfile"),
+               let iCloudProfile = try? decoder.decode(UserProfile.self, from: profileData) {
+                userProfile = iCloudProfile
+            }
+
+            if let recordsData = store.data(forKey: "healthRecords"),
+               let iCloudRecords = try? decoder.decode([HealthRecord].self, from: recordsData) {
+                for iCloudRecord in iCloudRecords {
+                    if let index = healthRecords.firstIndex(where: { $0.id == iCloudRecord.id }) {
+                        healthRecords[index] = iCloudRecord
+                    } else {
+                        healthRecords.append(iCloudRecord)
+                    }
+                }
+            }
+
+            if let notesData = store.data(forKey: "dailyNotes"),
+               let iCloudNotes = try? decoder.decode([DailyNote].self, from: notesData) {
+                for iCloudNote in iCloudNotes {
+                    if let index = dailyNotes.firstIndex(where: { $0.id == iCloudNote.id }) {
+                        dailyNotes.remove(at: index)
+                    } else {
+                        dailyNotes.append(iCloudNote)
+                    }
+                }
+            }
+        }
+    }
+
+    @objc public dynamic func isICloudSyncEnabled() -> Bool {
+        return UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
+    }
+
+    @objc public dynamic func manualSyncToICloud(completion: @escaping (Bool) -> Void) {
+        saveData()
+        completion(true)
     }
     
     @objc public dynamic func requestInitialAuthorization(completion: @escaping (Bool) -> Void) {
@@ -79,134 +270,9 @@ public class HealthStore: ObservableObject {
         }
     }
     
-    private func loadData() {
-        let decoder = JSONDecoder()
-        
-        if let profileData = try? Data(contentsOf: profileURL),
-           let profile = try? decoder.decode(UserProfile.self, from: profileData) {
-            userProfile = profile
-        }
-        
-        if let recordsData = try? Data(contentsOf: recordsURL),
-           let records = try? decoder.decode([HealthRecord].self, from: recordsData) {
-            healthRecords = records
-        }
-        
-        if let notesData = try? Data(contentsOf: notesURL),
-           let notes = try? decoder.decode([DailyNote].self, from: notesData) {
-            dailyNotes = notes
-        }
-        
-        if isICloudSyncEnabled() {
-            let store = NSUbiquitousKeyValueStore.default
-            
-            if let profileData = store.data(forKey: "userProfile"),
-               let iCloudProfile = try? decoder.decode(UserProfile.self, from: profileData) {
-                userProfile = iCloudProfile
-            }
-            
-            if let recordsData = store.data(forKey: "healthRecords"),
-               let iCloudRecords = try? decoder.decode([HealthRecord].self, from: recordsData) {
-                for iCloudRecord in iCloudRecords {
-                    if let index = healthRecords.firstIndex(where: { $0.id == iCloudRecord.id }) {
-                        healthRecords[index] = iCloudRecord
-                    } else {
-                        healthRecords.append(iCloudRecord)
-                    }
-                }
-
-            }
-            
-            if let notesData = store.data(forKey: "dailyNotes"),
-               let iCloudNotes = try? decoder.decode([DailyNote].self, from: notesData) {
-                for iCloudNote in iCloudNotes {
-                    if let index = dailyNotes.firstIndex(where: { $0.id == iCloudNote.id }) {
-                        dailyNotes[index] = iCloudNote
-                    } else {
-                        dailyNotes.append(iCloudNote)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func saveData() {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        
-        do {
-            if let profile = userProfile {
-                let profileData = try encoder.encode(profile)
-                try profileData.write(to: profileURL, options: .atomic)
-            }
-            
-            let recordsData = try encoder.encode(healthRecords)
-            try recordsData.write(to: recordsURL, options: .atomic)
-            
-            let notesData = try encoder.encode(dailyNotes)
-            try notesData.write(to: notesURL, options: .atomic)
-            
-            if isICloudSyncEnabled() {
-                let store = NSUbiquitousKeyValueStore.default
-                
-                if let profile = userProfile,
-                   let profileData = try? encoder.encode(profile) {
-                    store.set(profileData, forKey: "userProfile")
-                }
-                
-                if let recordsData = try? encoder.encode(healthRecords) {
-                    store.set(recordsData, forKey: "healthRecords")
-                }
-                
-                if let notesData = try? encoder.encode(dailyNotes) {
-                    store.set(notesData, forKey: "dailyNotes")
-                }
-                
-                store.synchronize()
-            }
-        } catch {
-            print("Error saving data: \(error.localizedDescription)")
-        }
-    }
-    
-    @objc public dynamic func isICloudSyncEnabled() -> Bool {
-        return UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
-    }
-    
-    @objc public dynamic func manualSyncToICloud(completion: @escaping (Bool) -> Void) {
-        saveData()
-        completion(true)
-    }
-    
-    func updateProfile(_ profile: UserProfile) {
-        userProfile = profile
-        saveData()
-    }
-    
-    func addHealthRecord(_ record: HealthRecord) {
-        let calendar = Calendar.current
-        let recordDate = calendar.startOfDay(for: record.date)
-        if let existingIndex = healthRecords.firstIndex(where: { existing in
-            let existingDate = calendar.startOfDay(for: existing.date)
-            return existing.type == record.type && existingDate == recordDate
-        }) {
-            healthRecords[existingIndex] = record
-        } else {
-            healthRecords.append(record)
-        }
-        saveData()
-    }
-    
-    func updateHealthRecord(_ updatedRecord: HealthRecord) {
-        if let index = healthRecords.firstIndex(where: { $0.id == updatedRecord.id }) {
-            healthRecords[index] = updatedRecord
-            saveData()
-        }
-    }
-    
-    func deleteHealthRecord(_ id: UUID) {
-        healthRecords.removeAll { $0.id == id }
-        saveData()
+    private func queueHealthDataFetch() {
+        // TODO: 实现健康数据获取逻辑
+        print("健康数据获取已加入队列")
     }
     
     func addDailyNote(_ note: DailyNote) {
@@ -226,134 +292,53 @@ public class HealthStore: ObservableObject {
         saveData()
     }
     
-    public func getLatestRecord(for type: HealthRecord.RecordType) -> HealthRecord? {
-        return healthRecords.filter { $0.type == type }.sorted { $0.date > $1.date }.first
-    }
-    
-    public func getRecords(for type: HealthRecord.RecordType, includingToday: Bool = true) -> [HealthRecord] {
-        let filteredRecords = healthRecords.filter { $0.type == type }
-        let calendar = Calendar.current
-        let groupedRecords = Dictionary(grouping: filteredRecords) { record in
-            calendar.startOfDay(for: record.date)
-        }
-        let dailyLatestRecords = groupedRecords.map { (_, records) -> HealthRecord in
-            records.max { a, b in a.date < b.date }!
-        }
-        return dailyLatestRecords.sorted { $0.date > $1.date }
-    }
-    
     public func getTodaysNotes() -> [DailyNote] {
         let calendar = Calendar.current
         return dailyNotes.filter { calendar.isDateInToday($0.date) }
     }
     
-    @objc public dynamic func generateHealthAdvice(userDescription: String?, completion: @escaping (String?) -> Void) {
-        guard userProfile?.aiSettings.enabled == true else {
-            print("AI建议功能未启用或未配置")
-            completion(nil)
-            return
-        }
-        
-        guard let aiSettings = userProfile?.aiSettings, !aiSettings.deepseekApiKey.isEmpty else {
-            print("Deepseek API 密钥未配置")
-            completion(nil)
-            return
-        }
-        
-        let healthData = getTodayHealthData()
-        
-        // Calculate age from birthDate
-        let userAge: Int?
-        if let profile = userProfile {
-            let calendar = Calendar.current
-            userAge = calendar.dateComponents([.year], from: profile.birthDate, to: Date()).year
-        } else {
-            userAge = nil
-        }
-        
-        // Gender is non-optional in UserProfile
-        let userGender = userProfile?.gender.rawValue
-        
-        guard let provider = healthAdvisorProvider else {
-            completion(nil)
-            return
-        }
-        
-        provider.useHealthAdvisor(healthData: healthData, userDescription: userDescription, userAge: userAge, userGender: userGender) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let advice):
-                    completion(advice)
-                case .failure(let error):
-                    print("Failed to generate health advice: \(error.localizedDescription)")
-                    completion(nil)
-                }
-            }
-        }
-    }
-    
-    private func queueHealthDataFetch() {
-        // TODO: 实现健康数据获取逻辑
-        print("健康数据获取已加入队列")
-    }
-    
-    public func getTodayHealthData() -> [String: Any] {
-        var data: [String: Any] = [:]
-        if let stepsRecord = getLatestRecord(for: .steps) {
-            data["steps"] = stepsRecord.value
-        }
-        if let sleepRecord = getLatestRecord(for: .sleep) {
-            data["sleep"] = ["hours": Int(sleepRecord.value), "minutes": Int((sleepRecord.value.truncatingRemainder(dividingBy: 1) * 60).rounded())]
-        }
-        if let heartRateRecord = getLatestRecord(for: .heartRate) {
-            data["heartRate"] = heartRateRecord.value
-        }
-        if let activeEnergyRecord = getLatestRecord(for: .activeEnergy) {
-            data["activeEnergy"] = activeEnergyRecord.value
-        }
-        if let restingEnergyRecord = getLatestRecord(for: .restingEnergy) {
-            data["restingEnergy"] = restingEnergyRecord.value
-        }
-        if let distanceRecord = getLatestRecord(for: .distance) {
-            data["distance"] = distanceRecord.value
-        }
-        if let bloodOxygenRecord = getLatestRecord(for: .bloodOxygen) {
-            data["bloodOxygen"] = bloodOxygenRecord.value
-        }
-        if let bodyFatRecord = getLatestRecord(for: .bodyFat) {
-            data["bodyFat"] = bodyFatRecord.value
-        }
-        if let flightsClimbedRecord = getLatestRecord(for: .flightsClimbed) {
-            data["flightsClimbed"] = flightsClimbedRecord.value
-        }
-        if let weightRecord = getLatestRecord(for: .weight) {
-            data["weight"] = weightRecord.value
-        }
-        if let bloodPressureRecord = getLatestRecord(for: .bloodPressure) {
-            data["bloodPressure"] = ["systolic": bloodPressureRecord.value, "diastolic": bloodPressureRecord.secondaryValue]
-        }
-        if let bloodSugarRecord = getLatestRecord(for: .bloodSugar) {
-            data["bloodSugar"] = bloodSugarRecord.value
-        }
-        if let bloodLipidsRecord = getLatestRecord(for: .bloodLipids) {
-            data["bloodLipids"] = bloodLipidsRecord.value
-        }
-        if let uricAcidRecord = getLatestRecord(for: .uricAcid) {
-            data["uricAcid"] = uricAcidRecord.value
-        }
-        
-        // Calculate BMI
-        if let weightRecord = getLatestRecord(for: .weight),
-           let profile = userProfile,
-           profile.height > 0 {
-            let bmi = weightRecord.value / ((profile.height / 100) * (profile.height / 100))
-            data["bmi"] = bmi
-        }
-        
-        return data
-    }
-    
     @objc public dynamic func refreshHealthData() {
-        queueHealthDataFetch()
+        print("Refreshing health data...")
+        // TODO: Implement actual health data refresh logic
+    }
+    
+    func getLatestRecord(for type: HealthRecord.RecordType) -> HealthRecord? {
+        return healthRecords
+            .filter { $0.type == type }
+            .max { $0.date < $1.date }
+    }
+    
+    func getRecords(for type: HealthRecord.RecordType, limit: Int? = nil) -> [HealthRecord] {
+        var records = healthRecords
+            .filter { $0.type == type }
+            .sorted { $0.date > $1.date }
+        
+        if let limit = limit {
+            records = Array(records.prefix(limit))
+        }
+        
+        return records
+    }
+    
+    func deleteHealthRecord(_ id: UUID) {
+        healthRecords.removeAll { $0.id == id }
+        saveData()
+    }
+    
+    func updateProfile(_ profile: UserProfile) {
+        userProfile = profile
+        saveData()
+    }
+    
+    func addHealthRecord(_ record: HealthRecord) {
+        healthRecords.append(record)
+        saveData()
+    }
+    
+    func updateHealthRecord(_ updatedRecord: HealthRecord) {
+        if let index = healthRecords.firstIndex(where: { $0.id == updatedRecord.id }) {
+            healthRecords[index] = updatedRecord
+            saveData()
+        }
     }
 }

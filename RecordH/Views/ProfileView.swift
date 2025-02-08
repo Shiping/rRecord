@@ -17,6 +17,15 @@ struct ProfileView: View {
     @State private var isAIEnabled = false
     @State private var apiKey = ""
     @State private var apiKeyVisible = false
+    @State private var selectedConfigurationId: UUID?
+    @State private var baseURL = ""
+    @State private var modelName = ""
+    @State private var showingNewConfigAlert = false
+    @State private var newConfigName = ""
+    @State private var configName = ""
+    @State private var showingConfigPicker = false
+    @State private var showingDeleteAlert = false
+    @State private var alertMessage = ""
 
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
@@ -25,16 +34,21 @@ struct ProfileView: View {
         return start...end
     }()
     
+    private var currentConfigName: String {
+        if let id = selectedConfigurationId,
+           let config = healthStore.userProfile?.aiSettings.first(where: { $0.id == id }) {
+            return config.name
+        }
+        return "未选择"
+    }
+    
+    private var canDeleteCurrentConfig: Bool {
+        guard let aiSettings = healthStore.userProfile?.aiSettings else { return false }
+        return aiSettings.count > 1
+    }
+    
     var body: some View {
         Form {
-            Section(header: Text("外观设置")) {
-                Picker("主题", selection: $themeManager.currentTheme) {
-                    Text("系统").tag("system")
-                    Text("浅色").tag("light")
-                    Text("深色").tag("dark")
-                }
-            }
-
             Section(header: Text("基本信息")) {
                 TextField("姓名", text: $name)
                 
@@ -52,6 +66,14 @@ struct ProfileView: View {
                     Text("男").tag(UserProfile.Gender.male)
                     Text("女").tag(UserProfile.Gender.female)
                     Text("其他").tag(UserProfile.Gender.other)
+                }
+            }
+            
+            Section(header: Text("外观设置")) {
+                Picker("主题", selection: $themeManager.currentTheme) {
+                    Text("系统").tag("system")
+                    Text("浅色").tag("light")
+                    Text("深色").tag("dark")
                 }
             }
 
@@ -123,43 +145,78 @@ struct ProfileView: View {
                 .disabled(!HKHealthStore.isHealthDataAvailable())
             }
             
-            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。用户可以配置其他模型。")) {
+            Section(header: HStack {
+                Text("AI 助手设置")
+                Spacer()
+                Button("新增配置") {
+                    showingNewConfigAlert = true
+                }
+            }, footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。用户可以配置其他模型。")) {
                 Toggle("启用 AI 健康建议", isOn: $isAIEnabled)
                 
                 if isAIEnabled {
                     HStack {
-                        if apiKeyVisible {
-                            TextField("Deepseek API 密钥", text: $apiKey)
-                        } else {
-                            SecureField("Deepseek API 密钥", text: $apiKey)
+                        Text("当前配置")
+                        Spacer()
+                        Button(action: {
+                            showingConfigPicker = true
+                        }) {
+                            HStack {
+                                Text(currentConfigName)
+                                Image(systemName: "chevron.down")
+                            }
+                        }
+                    }
+                    
+                    if selectedConfigurationId != nil {
+                        HStack {
+                            TextField("配置名称", text: $configName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            
+                            if canDeleteCurrentConfig {
+                                Button(action: {
+                                    showingDeleteAlert = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                            }
                         }
                         
-                        Button(action: {
-                            apiKeyVisible.toggle()
-                        }) {
-                            Image(systemName: apiKeyVisible ? "eye.slash.fill" : "eye.fill")
+                        HStack {
+                            if apiKeyVisible {
+                                TextField("Deepseek API 密钥", text: $apiKey)
+                            } else {
+                                SecureField("Deepseek API 密钥", text: $apiKey)
+                            }
+                            
+                            Button(action: {
+                                apiKeyVisible.toggle()
+                            }) {
+                                Image(systemName: apiKeyVisible ? "eye.slash.fill" : "eye.fill")
+                            }
                         }
-                    }
-                    if apiKey.isEmpty {
-                        Text("请输入有效的 API 密钥")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        Text("Deepseek API Base URL")
-                        TextField("Deepseek API Base URL", text: $baseURL)
-                            .textCase(.lowercase)
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        Text("Deepseek Model Name")
-                        TextField("Deepseek Model Name", text: $modelName)
-                            .textCase(.lowercase)
+                        if apiKey.isEmpty {
+                            Text("请输入有效的 API 密钥")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text("Deepseek API Base URL")
+                            TextField("Deepseek API Base URL", text: $baseURL)
+                                .textCase(.lowercase)
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text("Deepseek Model Name")
+                            TextField("Deepseek Model Name", text: $modelName)
+                                .textCase(.lowercase)
+                        }
                     }
                 }
             }
-
+            
             Section {
                 Button("保存") {
                     saveProfile()
@@ -170,29 +227,66 @@ struct ProfileView: View {
         }
         .navigationTitle("个人信息")
         .onAppear(perform: loadProfile)
+        .alert("新增 AI 配置", isPresented: $showingNewConfigAlert) {
+            TextField("配置名称", text: $newConfigName)
+            Button("取消", role: .cancel) {
+                newConfigName = ""
+            }
+            Button("确定") {
+                if !newConfigName.isEmpty {
+                    addNewAIConfiguration(name: newConfigName)
+                    newConfigName = ""
+                }
+            }
+        } message: {
+            Text("请输入配置名称")
+        }
+        .alert("删除配置", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) {
+                deleteCurrentConfiguration()
+            }
+        } message: {
+            Text("确定要删除当前配置吗？这将删除该配置的所有设置。")
+        }
+        .confirmationDialog("选择 AI 配置", isPresented: $showingConfigPicker, titleVisibility: .visible) {
+            ForEach(healthStore.userProfile?.aiSettings ?? []) { config in
+                Button(config.name) {
+                    selectedConfigurationId = config.id
+                    apiKey = config.deepseekApiKey
+                    baseURL = config.deepseekBaseURL
+                    modelName = config.deepseekModel
+                    configName = config.name
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
         .alert("提示", isPresented: $showingAlert) {
             Button("确定", role: .cancel) {}
         } message: {
-            Text("请填写完整的个人信息")
+            Text(alertMessage.isEmpty ? "请填写完整的个人信息" : alertMessage)
         }
     }
     
-    @State private var baseURL = ""
-    @State private var modelName = ""
-
     private func loadProfile() {
-        if let profile = healthStore.userProfile {
+        if let profile = healthStore.userProfile, let aiSettings = profile.aiSettings.first {
             name = profile.name
             height = String(format: "%.1f", profile.height)
             birthDate = profile.birthDate
             gender = profile.gender
-            isAIEnabled = profile.aiSettings.enabled
-            apiKey = profile.aiSettings.deepseekApiKey
-            baseURL = profile.aiSettings.deepseekBaseURL
-            modelName = profile.aiSettings.deepseekModel
+            isAIEnabled = !profile.aiSettings.isEmpty
+            apiKey = aiSettings.deepseekApiKey
+            baseURL = aiSettings.deepseekBaseURL
+            modelName = aiSettings.deepseekModel
+            selectedConfigurationId = aiSettings.id
+            configName = aiSettings.name
         } else {
             baseURL = "https://api.deepseek.com/v1"
             modelName = "deepseek-chat"
+            isAIEnabled = false
+            apiKey = ""
+            selectedConfigurationId = nil
+            configName = ""
         }
     }
     
@@ -200,26 +294,101 @@ struct ProfileView: View {
         guard !name.isEmpty,
               let heightValue = Double(height.replacingOccurrences(of: ",", with: "."))
         else {
+            alertMessage = "请填写完整的个人信息"
             showingAlert = true
             return
         }
-        let aiSettings = UserProfile.AISettings(
-            deepseekApiKey: apiKey,
-            deepseekBaseURL: baseURL.isEmpty ? "https://api.deepseek.com/v1" : baseURL,
-            deepseekModel: modelName.isEmpty ? "deepseek-chat" : modelName,
-            enabled: isAIEnabled
-        )
+        
+        var aiConfigurations = healthStore.userProfile?.aiSettings ?? []
+        if aiConfigurations.isEmpty && isAIEnabled {
+            aiConfigurations = [UserProfile.AIConfiguration(name: "默认配置")]
+        }
+        
+        if let selectedId = selectedConfigurationId {
+            if let index = aiConfigurations.firstIndex(where: { $0.id == selectedId }) {
+                let aiConfiguration = UserProfile.AIConfiguration(
+                    name: configName.isEmpty ? aiConfigurations[index].name : configName,
+                    deepseekApiKey: apiKey,
+                    deepseekBaseURL: baseURL.isEmpty ? "https://api.deepseek.com/v1" : baseURL,
+                    deepseekModel: modelName.isEmpty ? "deepseek-chat" : modelName,
+                    enabled: isAIEnabled
+                )
+                aiConfigurations[index] = aiConfiguration
+            }
+        }
         
         let profile = UserProfile(
             height: heightValue,
             birthDate: birthDate,
             gender: gender,
             name: name,
-            aiSettings: aiSettings
+            aiSettings: isAIEnabled ? aiConfigurations : []
         )
         
         healthStore.updateProfile(profile)
+        print("保存 Profile 数据: \(profile)")
         dismiss()
+    }
+    
+    private func addNewAIConfiguration(name: String) {
+        let newConfiguration = UserProfile.AIConfiguration(
+            name: name,
+            deepseekApiKey: "",
+            deepseekBaseURL: "https://api.deepseek.com/v1",
+            deepseekModel: "deepseek-chat",
+            enabled: true
+        )
+        
+        var currentAISettings = healthStore.userProfile?.aiSettings ?? []
+        currentAISettings.append(newConfiguration)
+        
+        if var profile = healthStore.userProfile {
+            profile.aiSettings = currentAISettings
+            healthStore.updateProfile(profile)
+            
+            selectedConfigurationId = newConfiguration.id
+            apiKey = ""
+            baseURL = newConfiguration.deepseekBaseURL
+            modelName = newConfiguration.deepseekModel
+            configName = name
+        }
+        
+        print("新增 AI 配置: \(newConfiguration)")
+    }
+    
+    private func deleteCurrentConfiguration() {
+        guard let selectedId = selectedConfigurationId,
+              var aiConfigurations = healthStore.userProfile?.aiSettings,
+              aiConfigurations.count > 1,
+              let index = aiConfigurations.firstIndex(where: { $0.id == selectedId })
+        else {
+            alertMessage = "无法删除唯一的配置"
+            showingAlert = true
+            return
+        }
+        
+        aiConfigurations.remove(at: index)
+        
+        if var profile = healthStore.userProfile {
+            profile.aiSettings = aiConfigurations
+            healthStore.updateProfile(profile)
+            
+            if let firstConfig = aiConfigurations.first {
+                selectedConfigurationId = firstConfig.id
+                apiKey = firstConfig.deepseekApiKey
+                baseURL = firstConfig.deepseekBaseURL
+                modelName = firstConfig.deepseekModel // 确保这里是 deepseekModel
+                configName = firstConfig.name
+            } else {
+                selectedConfigurationId = nil
+                apiKey = ""
+                baseURL = ""
+                modelName = ""
+                configName = ""
+            }
+        }
+        
+        print("删除 AI 配置: \(selectedId)")
     }
 }
 

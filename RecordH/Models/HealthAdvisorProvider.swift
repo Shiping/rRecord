@@ -109,12 +109,12 @@ class HealthAdvisorProvider {
 
     func getHealthAdvice(healthData: [String: Any], userDescription: String?, userAge: Int?, userGender: String?, completion: @escaping (Result<String, Error>) -> Void) {
         // 检查AI功能是否启用
-        guard let aiSettings = config.healthStore?.userProfile?.aiSettings, aiSettings.enabled else {
+        guard let aiSettings = config.healthStore?.userProfile?.aiSettings, !aiSettings.isEmpty, aiSettings.first?.enabled == true else { // 修改 Line 112
             completion(.failure(MCPError.networkError("AI功能未启用或未配置")))
             return
         }
 
-        guard let aiSettings = config.healthStore?.userProfile?.aiSettings, !aiSettings.deepseekApiKey.isEmpty else {
+        guard let aiSettings = config.healthStore?.userProfile?.aiSettings, !aiSettings.isEmpty, !(aiSettings.first?.deepseekApiKey.isEmpty ?? true) else { // 修改 Line 117
             completion(.failure(MCPError.networkError("Deepseek API 密钥未配置")))
             return
         }
@@ -149,15 +149,16 @@ class HealthAdvisorProvider {
             formattedHealthData["bodyFat"] = bodyFat
         }
 
-        let url = URL(string: "\(config.healthStore?.userProfile?.aiSettings.deepseekBaseURL ?? "https://api.deepseek.com/v1")/chat/completions")!
+        let url = URL(string: "\(config.healthStore?.userProfile?.aiSettings.first?.deepseekBaseURL ?? "https://api.deepseek.com/v1")/chat/completions")! // 修改 Line 152
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(config.healthStore?.userProfile?.aiSettings.deepseekApiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(config.healthStore?.userProfile?.aiSettings.first?.deepseekApiKey ?? "")", forHTTPHeaderField: "Authorization") // 修改 Line 155
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let prompt = generatePrompt(healthData: healthData, userDescription: userDescription, userAge: userAge, userGender: userGender)
         let requestBody: [String: Any] = [
-            "model": config.healthStore?.userProfile?.aiSettings.deepseekModel ?? "deepseek-chat",
+            "model": config.healthStore?.userProfile?.aiSettings.first?.deepseekModel ?? "deepseek-chat", // 修改 Line 160
             "messages": [
                 [
                     "role": "system",

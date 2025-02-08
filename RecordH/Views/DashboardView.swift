@@ -402,106 +402,152 @@ struct DailyRecommendationsView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject var healthStore: HealthStore
     @State private var isGeneratingAdvice = false
-    @State private var adviceContent: String? = nil
-    @State private var userDescription: String = "" // State for user description input
-    @State private var healthDataSummary: String? = nil // State for health data summary
-
-    var todaysAdvice: DailyNote? {
-        healthStore.dailyNotes
-            .filter { Calendar.current.isDateInToday($0.date) && $0.category == .aiAdvice }
-            .first
+    @State private var adviceText: String? = nil
+    @State private var userDescription: String = ""
+    @State private var showingConfigPicker = false
+    
+    private var currentConfigName: String {
+        if let id = healthStore.userProfile?.selectedAIConfigurationId,
+           let config = healthStore.userProfile?.aiSettings.first(where: { $0.id == id }) {
+            return config.name
+        }
+        return "默认配置"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(spacing: 10) {
+            // Title and Actions
             HStack {
-                Text("AI健康建议")
+                Text("AI 健康建议")
                     .font(.headline)
                     .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                
                 Spacer()
+                
+                Button(action: {
+                    showingConfigPicker = true
+                }) {
+                    HStack {
+                        Text(currentConfigName)
+                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.color(.background, scheme: colorScheme))
+                    .cornerRadius(8)
+                }
+                
                 Button(action: generateAdvice) {
                     Image(systemName: "arrow.clockwise")
                         .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        .rotationEffect(.degrees(isGeneratingAdvice ? 360 : 0))
+                        .animation(isGeneratingAdvice ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isGeneratingAdvice)
                 }
-                .disabled(isGeneratingAdvice)
             }
-            
-            // User description input
+
             TextField("在此输入您的健康状态描述 (可选)", text: $userDescription)
                 .textFieldStyle(.roundedBorder)
                 .padding(.bottom, 10)
 
-            if let content = adviceContent { // 使用 adviceContent
-                    Text(content) // 使用 Text 显示建议内容
+            if let adviceText = adviceText {
+                VStack(alignment: .leading, spacing: 12) {
+                    // 主要建议内容
+                    Text(adviceText)
                         .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading) // 撑满容器宽度，左对齐
-                        .padding(.horizontal)
-
-                // Display health data summary and user description
-                if let summary = healthDataSummary, !summary.isEmpty || !userDescription.isEmpty {
-                    VStack(alignment: .leading) {
-                        Divider()
-                        if !summary.isEmpty {
-                            Text("健康数据梗概:")
-                                .font(.caption)
-                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
-                            Text(summary)
-                                .font(.caption2)
-                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
-                        }
-                        if !userDescription.isEmpty {
-                            Text("用户描述:")
-                                .font(.caption)
-                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
-                            Text(userDescription)
-                                .font(.caption2)
-                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // 分隔线
+                    Divider()
+                    
+                    // 用户输入和健康数据摘要 (弱化显示)
+                    if !userDescription.isEmpty {
+                        Text("用户描述：\(userDescription)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // 标题
+                    Text("建议生成依据")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    // 使用的所有健康数据
+                    Grid(alignment: .leading) {
+                        ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
+                            GridRow {
+                                Text("\(type.displayName):")
+                                    .gridColumnAlignment(.leading)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                if let record = healthStore.getLatestRecord(for: type) {
+                                    HStack(spacing: 4) {
+                                        if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
+                                            Text("\(String(format: "%.1f", record.value))/\(String(format: "%.1f", secondaryValue)) \(record.unit)")
+                                        } else if type == .sleep {
+                                            let hours = Int(record.value)
+                                            let minutes = Int(record.secondaryValue ?? 0)
+                                            Text("\(hours)小时\(minutes)分钟")
+                                        } else {
+                                            Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
+                                        }
+                                        Text("(\(record.date.formatted(.dateTime.month().day())))")
+                                    }
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                } else {
+                                    Text("暂无数据")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary.opacity(0.7))
+                                }
+                            }
                         }
                     }
-                    .padding(.top, 8)
-                    .padding(.horizontal)
-                    .background(Theme.color(.background, scheme: colorScheme).opacity(0.3)) // Further weakened background
-                    .cornerRadius(5)
                 }
-
+                .padding(.horizontal)
             } else if isGeneratingAdvice {
-                VStack {
-                    ProgressView()
-                    Text("正在生成建议...")
-                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
-                        .font(.subheadline)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding()
             } else {
-                Text("点击刷新按钮获取AI健康建议")
-                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
-                    .font(.subheadline)
+                Text("点击 ↻ 按钮获取 AI 健康建议")
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 8)
             }
         }
-        .frame(maxWidth: .infinity)
+        .confirmationDialog("选择 AI 配置", isPresented: $showingConfigPicker, titleVisibility: .visible) {
+            ForEach(healthStore.userProfile?.aiSettings ?? []) { config in
+                Button(config.name) {
+                    healthStore.updateSelectedAIConfiguration(config.id)
+                    generateAdvice() // 切换配置后立即刷新建议
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
+
 
     private func generateAdvice() {
         isGeneratingAdvice = true
-        adviceContent = nil // 点击按钮时先清空 adviceContent
-        healthDataSummary = nil // 清空健康数据梗概
+        adviceText = nil // 清空之前的建议
         
-        let dataSummary = healthStore.getTodayHealthData()
-        var summaryText = ""
-        for (key, value) in dataSummary {
-            summaryText += "\(key): \(value)\n"
-        }
-        healthDataSummary = summaryText.trimmingCharacters(in: .newlines) // 保存健康数据梗概
-
-        healthStore.generateHealthAdvice(userDescription: userDescription) { advice in // Pass userDescription
-            isGeneratingAdvice = false
-            if let advice = advice {
-                adviceContent = advice // 获取到建议后更新 adviceContent
-            } else {
-                // 如果生成失败，可以在这里添加错误处理逻辑
-                print("Failed to generate health advice")
-                adviceContent = "生成建议失败，请稍后重试" // 提示用户生成失败
+        healthStore.generateHealthAdvice(userDescription: userDescription) { advice in
+            DispatchQueue.main.async {
+                isGeneratingAdvice = false
+                if let advice = advice {
+                    adviceText = advice
+                    
+                    if let currentConfigId = healthStore.userProfile?.selectedAIConfigurationId {
+                        print("AI 建议使用配置: \(currentConfigId)")
+                    }
+                    
+                } else {
+                    adviceText = "Failed to generate AI advice."
+                }
             }
         }
     }
