@@ -3,6 +3,7 @@ import Charts
 
 struct WeightChartSection: View {
     let records: [HealthRecord]
+    let healthStore: HealthStore
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -10,6 +11,54 @@ struct WeightChartSection: View {
                 .font(.headline)
             
             Chart(records) { record in
+                // Add background for normal range
+                if let min = HealthRecord.RecordType.weight.normalRange.min,
+                   let max = HealthRecord.RecordType.weight.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Min", min),
+                        yEnd: .value("Normal Max", max)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                } else if let min = HealthRecord.RecordType.weight.normalRange.min {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Min", min),
+                        yEnd: .value("Max", records.map { $0.value }.max() ?? min * 2)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                } else if let max = HealthRecord.RecordType.weight.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Min", 0),
+                        yEnd: .value("Normal Max", max)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                }
+                
+                // Add background for abnormal ranges
+                if let min = HealthRecord.RecordType.weight.normalRange.min {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Min", 0),
+                        yEnd: .value("Normal Min", min)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                }
+                if let max = HealthRecord.RecordType.weight.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Max", max),
+                        yEnd: .value("Max", records.map { $0.value }.max() ?? max * 1.5)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                }
+
                 LineMark(
                     x: .value("Date", record.date),
                     y: .value("Weight", record.value)
@@ -45,6 +94,35 @@ struct BMIChartSection: View {
             
             if !bmiRecords.isEmpty {
                 Chart(bmiRecords, id: \.date) { record in
+                    // Add background for normal range
+                    if let min = HealthRecord.RecordType.weight.normalRange.min,
+                       let max = HealthRecord.RecordType.weight.normalRange.max {
+                        RectangleMark(
+                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                            yStart: .value("Normal Min", min),
+                            yEnd: .value("Normal Max", max)
+                        )
+                        .foregroundStyle(Color.green.opacity(0.1))
+                        
+                        // Add background for abnormal ranges
+                        RectangleMark(
+                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                            yStart: .value("Min", min - 5),
+                            yEnd: .value("Normal Min", min)
+                        )
+                        .foregroundStyle(Color.red.opacity(0.05))
+                        
+                        RectangleMark(
+                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                            yStart: .value("Normal Max", max),
+                            yEnd: .value("Max", max + 5)
+                        )
+                        .foregroundStyle(Color.red.opacity(0.05))
+                    }
+
                     LineMark(
                         x: .value("Date", record.date),
                         y: .value("BMI", record.bmi)
@@ -78,6 +156,34 @@ struct BloodPressureChartSection: View {
                 .font(.headline)
             
             Chart(records) { record in
+                // Add background for normal range
+                if let min = normalRange.min, let max = normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Min", min),
+                        yEnd: .value("Normal Max", max)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                    
+                    // Add background for abnormal ranges
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Min", 0),
+                        yEnd: .value("Normal Min", min)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                    
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Max", max),
+                        yEnd: .value("Max", max * 1.5)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                }
+
                 LineMark(
                     x: .value("Date", record.date),
                     y: .value("Value", valueSelector(record))
@@ -117,6 +223,53 @@ struct ChartSection: View {
                 .font(.headline)
             
             Chart(records) { record in
+                // Add background for normal range
+                if let min = type.normalRange.min, let max = type.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Min", min),
+                        yEnd: .value("Normal Max", max)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                } else if let min = type.normalRange.min {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Min", min),
+                        yEnd: .value("Max", records.map { $0.value }.max() ?? min * 2)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                } else if let max = type.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Min", 0),
+                        yEnd: .value("Normal Max", max)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                }
+                
+                // Add background for abnormal ranges
+                if let min = type.normalRange.min {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Min", 0),
+                        yEnd: .value("Normal Min", min)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                }
+                if let max = type.normalRange.max {
+                    RectangleMark(
+                        xStart: .value("Start", records.first?.date ?? Date()),
+                        xEnd: .value("End", records.last?.date ?? Date()),
+                        yStart: .value("Normal Max", max),
+                        yEnd: .value("Max", records.map { $0.value }.max() ?? max * 1.5)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                }
+
                 LineMark(
                     x: .value("Date", record.date),
                     y: .value("Value", record.value)

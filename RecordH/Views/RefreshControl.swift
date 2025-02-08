@@ -5,26 +5,52 @@ struct RefreshControl: View {
     @Environment(\.colorScheme) var colorScheme
     let action: () -> Void
     
+    @State private var pullTriggered = false
+    
     var body: some View {
         GeometryReader { geometry in
-            if geometry.frame(in: .global).minY > 50 {
-                Spacer()
+            let pullDistance = geometry.frame(in: .global).minY
+            let threshold: CGFloat = 70
+            
+            if pullDistance > threshold && !pullTriggered {
+                Color.clear
+                    .preference(key: RefreshPreferenceKey.self, value: true)
                     .onAppear {
+                        pullTriggered = true
                         if !isRefreshing {
                             action()
                         }
                     }
+            } else if pullDistance <= 0 {
+                Color.clear
+                    .preference(key: RefreshPreferenceKey.self, value: false)
+                    .onAppear {
+                        pullTriggered = false
+                    }
             }
+            
             HStack {
                 Spacer()
                 if isRefreshing {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Theme.color(.accent, scheme: colorScheme)))
+                } else if pullDistance > 0 {
+                    Image(systemName: "arrow.down")
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        .rotationEffect(.degrees((min(pullDistance, threshold) / threshold) * 180.0))
                 }
                 Spacer()
             }
         }
         .frame(height: 50)
+    }
+}
+
+private struct RefreshPreferenceKey: PreferenceKey {
+    static var defaultValue: Bool = false
+    
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = nextValue()
     }
 }
 

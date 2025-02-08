@@ -1,4 +1,5 @@
 import SwiftUI
+import HealthKit
 
 struct AddRecordSheet: View {
     let type: HealthRecord.RecordType
@@ -6,11 +7,21 @@ struct AddRecordSheet: View {
     @Binding var isPresented: Bool
     var editingRecord: HealthRecord?
     
-    @State private var value: Double
-    @State private var secondaryValue: Double
+    @State private var value: Double?
+    @State private var secondaryValue: Double?
+    @State private var isEditingValue = false
+    @State private var isEditingSecondaryValue = false
     @State private var note: String = ""
     @State private var date = Date()
     @Environment(\.colorScheme) var colorScheme
+    
+    var currentBMI: Double? {
+        guard type == .weight,
+              let weight = value,
+              let height = healthStore.userProfile?.height,
+              height > 0 else { return nil }
+        return weight / (height * height)
+    }
     
     init(type: HealthRecord.RecordType, healthStore: HealthStore, isPresented: Binding<Bool>, editingRecord: HealthRecord? = nil) {
         self.type = type
@@ -24,8 +35,8 @@ struct AddRecordSheet: View {
             _value = State(initialValue: Double(Int(totalMinutes) / 60))
             _secondaryValue = State(initialValue: Double(Int(totalMinutes.truncatingRemainder(dividingBy: 60))))
         } else {
-            _value = State(initialValue: editingRecord?.value ?? 0)
-            _secondaryValue = State(initialValue: editingRecord?.secondaryValue ?? 0)
+            _value = State(initialValue: editingRecord?.value)
+            _secondaryValue = State(initialValue: editingRecord?.secondaryValue)
         }
         _note = State(initialValue: editingRecord?.note ?? "")
         _date = State(initialValue: editingRecord?.date ?? Date())
@@ -82,23 +93,56 @@ struct AddRecordSheet: View {
                             .padding(.horizontal, -20)
                         }
                     } else {
-                        HStack {
-                            Text(type.valueLabel)
-                            Spacer()
-                            TextField("Value", value: $value, formatter: NumberFormatter())
-                                .multilineTextAlignment(.trailing)
-                                .keyboardType(.decimalPad)
-                            Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .steps ? "步" : ""))
-                        }
-                        
-                        if type.needsSecondaryValue {
-                            HStack {
-                                Text(type == .bloodPressure ? "舒张压" : "")
-                                Spacer()
-                                TextField("Value", value: $secondaryValue, formatter: NumberFormatter())
-                                    .multilineTextAlignment(.trailing)
-                                    .keyboardType(.decimalPad)
-                                Text(editingRecord?.unit ?? (type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .steps ? "步" : ""))
+                        VStack(spacing: 12) {
+                            // Primary value input
+                            ValueInputField(
+                                label: type.valueLabel,
+                                value: $value,
+                                isEditing: $isEditingValue,
+                                unit: type.unit
+                            )
+                            
+                            // Show BMI for weight input
+                            if type == .weight {
+                                if let bmi = currentBMI {
+                                    HStack {
+                                        Text("BMI")
+                                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                                        Spacer()
+                                        HStack(spacing: 8) {
+                                            Text(String(format: "%.1f", bmi))
+                                                .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                                            Text(getBMIStatus(bmi))
+                                                .foregroundColor(getBMIColor(bmi))
+                                        }
+                                    }
+                                    .font(.subheadline)
+                                    .padding(.horizontal)
+                                } else if healthStore.userProfile?.height == nil {
+                                    NavigationLink {
+                                        ProfileView(healthStore: healthStore)
+                                    } label: {
+                                        HStack {
+                                            Text("需要设置身高才能计算BMI")
+                                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.horizontal)
+                                    }
+                                }
+                            }
+                            
+                            // Secondary value input for blood pressure
+                            if type.needsSecondaryValue {
+                                ValueInputField(
+                                    label: "舒张压",
+                                    value: $secondaryValue,
+                                    isEditing: $isEditingSecondaryValue,
+                                    unit: "mmHg"
+                                )
                             }
                         }
                     }
@@ -124,44 +168,78 @@ struct AddRecordSheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
-                        // Validate and constrain values
-                        if type == .sleep {
-                            value = Double(min(max(Int(value), 0), 23))
-                            secondaryValue = Double(min(max(Int(secondaryValue), 0), 59))
+                        if let inputValue = value {
+                            // Validate and constrain values
+                            if type == .sleep {
+                                value = Double(min(max(Int(inputValue), 0), 23))
+                                if let secValue = secondaryValue {
+                                    secondaryValue = Double(min(max(Int(secValue), 0), 59))
+                                }
+                            }
+                            saveRecord()
+                            isPresented = false
                         }
-                        saveRecord()
-                        isPresented = false
                     }
+                    .disabled(value == nil || (type.needsSecondaryValue && secondaryValue == nil))
                 }
             }
         }
     }
     
+    private func getBMIStatus(_ bmi: Double) -> String {
+        switch bmi {
+        case ..<18.5:
+            return "偏瘦"
+        case 18.5..<23.9:
+            return "正常"
+        case 23.9..<27.9:
+            return "偏胖"
+        default:
+            return "肥胖"
+        }
+    }
+    
+    private func getBMIColor(_ bmi: Double) -> Color {
+        switch bmi {
+        case 18.5..<23.9:
+            return .green
+        case 23.9..<27.9:
+            return .orange
+        default:
+            return .red
+        }
+    }
+    
     private func saveRecord() {
-        let finalValue = value
+        guard let finalValue = value else { return }
         
-        if let editingRecord = editingRecord {
-            let updatedRecord = HealthRecord(
-                id: editingRecord.id,
+        let record: HealthRecord
+        if type == .weight {
+            record = HealthRecord(
+                id: editingRecord?.id ?? UUID(),
                 date: date,
                 type: type,
                 value: finalValue,
-                secondaryValue: type == .bloodPressure ? secondaryValue : (type == .sleep ? secondaryValue : nil),
-                unit: editingRecord.unit,
+                secondaryValue: currentBMI,
+                unit: "kg",
                 note: note
             )
-            healthStore.updateHealthRecord(updatedRecord)
         } else {
-            let newRecord = HealthRecord(
-                id: UUID(),
+            record = HealthRecord(
+                id: editingRecord?.id ?? UUID(),
                 date: date,
                 type: type,
                 value: finalValue,
                 secondaryValue: type == .bloodPressure ? secondaryValue : (type == .sleep ? secondaryValue : nil),
-                unit: type == .bloodPressure ? "mmHg" : type == .weight ? "kg" : type == .sleep ? "小时" : type == .steps ? "步" : "",
+                unit: type == .bloodPressure ? "mmHg" : type == .sleep ? "小时" : type == .steps ? "步" : "",
                 note: note
             )
-            healthStore.addHealthRecord(newRecord)
+        }
+        
+        if editingRecord != nil {
+            healthStore.updateHealthRecord(record)
+        } else {
+            healthStore.addHealthRecord(record)
         }
     }
 }

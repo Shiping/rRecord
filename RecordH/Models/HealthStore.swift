@@ -7,12 +7,38 @@ class HealthStore: ObservableObject {
     @Published var healthRecords: [HealthRecord] = []
     @Published var dailyNotes: [DailyNote] = []
     
-    private let userDefaults = UserDefaults.standard
     private let healthStore = HKHealthStore()
+    private let fileManager = FileManager.default
+    private var documentsDirectory: URL {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+    
+    private var profileURL: URL {
+        documentsDirectory.appendingPathComponent("userProfile.json")
+    }
+    
+    private var recordsURL: URL {
+        documentsDirectory.appendingPathComponent("healthRecords.json")
+    }
+    
+    private var notesURL: URL {
+        documentsDirectory.appendingPathComponent("dailyNotes.json")
+    }
+    
     
     init() {
         print("Initializing HealthStore")
+        createDirectoryIfNeeded()
+        migrateDataIfNeeded()
         // Defer loadData until after authorization
+    }
+    
+    private func migrateDataIfNeeded() {
+        // No migration needed as we're using Documents directory directly
+    }
+    
+    private func createDirectoryIfNeeded() {
+        // Documents directory is always available, no need to create it
     }
     
     func requestInitialAuthorization(completion: @escaping (Bool) -> Void) {
@@ -69,34 +95,48 @@ class HealthStore: ObservableObject {
     }
     
     private func loadData() {
-        if let profileData = userDefaults.data(forKey: "userProfile"),
-           let profile = try? JSONDecoder().decode(UserProfile.self, from: profileData) {
+        let decoder = JSONDecoder()
+        
+        // Load user profile
+        if let profileData = try? Data(contentsOf: profileURL),
+           let profile = try? decoder.decode(UserProfile.self, from: profileData) {
             userProfile = profile
         }
         
-        if let recordsData = userDefaults.data(forKey: "healthRecords"),
-           let records = try? JSONDecoder().decode([HealthRecord].self, from: recordsData) {
+        // Load health records
+        if let recordsData = try? Data(contentsOf: recordsURL),
+           let records = try? decoder.decode([HealthRecord].self, from: recordsData) {
             healthRecords = records
         }
         
-        if let notesData = userDefaults.data(forKey: "dailyNotes"),
-           let notes = try? JSONDecoder().decode([DailyNote].self, from: notesData) {
+        // Load daily notes
+        if let notesData = try? Data(contentsOf: notesURL),
+           let notes = try? decoder.decode([DailyNote].self, from: notesData) {
             dailyNotes = notes
         }
     }
     
     private func saveData() {
-        if let profile = userProfile,
-           let profileData = try? JSONEncoder().encode(profile) {
-            userDefaults.set(profileData, forKey: "userProfile")
-        }
-        
-        if let recordsData = try? JSONEncoder().encode(healthRecords) {
-            userDefaults.set(recordsData, forKey: "healthRecords")
-        }
-        
-        if let notesData = try? JSONEncoder().encode(dailyNotes) {
-            userDefaults.set(notesData, forKey: "dailyNotes")
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+            
+            // Save user profile
+            if let profile = userProfile {
+                let profileData = try encoder.encode(profile)
+                try profileData.write(to: profileURL, options: .atomic)
+            }
+            
+            // Save health records
+            let recordsData = try encoder.encode(healthRecords)
+            try recordsData.write(to: recordsURL, options: .atomic)
+            
+            // Save daily notes
+            let notesData = try encoder.encode(dailyNotes)
+            try notesData.write(to: notesURL, options: .atomic)
+            
+        } catch {
+            print("Error saving data: \(error.localizedDescription)")
         }
     }
     

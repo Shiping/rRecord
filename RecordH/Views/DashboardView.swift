@@ -6,6 +6,7 @@ struct DashboardView: View {
     @State private var showingAddNote = false
     @State private var noteToEdit: DailyNote? = nil
     @State private var isRefreshing = false
+    @State private var hasInitiallyLoaded = false
     
     var body: some View {
         NavigationView {
@@ -33,6 +34,12 @@ struct DashboardView: View {
             }
             .background(Theme.gradientBackground(for: colorScheme))
             .navigationTitle("健康记录")
+            .onAppear {
+                if !hasInitiallyLoaded {
+                    refreshData()
+                    hasInitiallyLoaded = true
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {

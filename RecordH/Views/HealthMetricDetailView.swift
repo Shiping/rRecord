@@ -135,7 +135,7 @@ struct HealthMetricDetailView: View {
     }
     private var weightCharts: some View {
         VStack(spacing: 20) {
-            WeightChartSection(records: filteredRecords)
+            WeightChartSection(records: filteredRecords, healthStore: healthStore)
                 .frame(height: 200)
             
             BMIChartSection(records: filteredRecords, healthStore: healthStore)
