@@ -12,7 +12,9 @@ struct ProfileView: View {
     @State private var gender = UserProfile.Gender.other
     @State private var showingAlert = false
     @State private var isSyncing = false
-    
+    @State private var isICloudSyncEnabled: Bool = UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") // 添加 iCloud 同步开关状态
+    @State private var isManualSyncing = false // 添加手动同步状态
+
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
         let start = calendar.date(byAdding: .year, value: -100, to: Date())!
@@ -22,6 +24,41 @@ struct ProfileView: View {
     
     var body: some View {
         Form {
+            Section(header: Text("iCloud 同步"), footer: Text("启用 iCloud 同步后，您的数据将在 iCloud 中备份，并在重新安装应用后自动恢复。")) { // 添加 iCloud 同步 Section 和提示信息
+                Toggle("启用 iCloud 同步", isOn: $isICloudSyncEnabled)
+                    .onChange(of: isICloudSyncEnabled) { newValue in
+                        UserDefaults.standard.set(newValue, forKey: "iCloudSyncEnabled")
+                    }
+
+                Button(action: {
+                    isManualSyncing = true
+                    healthStore.manualSyncToICloud { success in // 调用 HealthStore 的手动同步方法
+                        DispatchQueue.main.async {
+                            isManualSyncing = false
+                            if success {
+                                print("手动 iCloud 同步成功") // 可以在此处添加成功提示
+                            } else {
+                                print("手动 iCloud 同步失败") // 可以在此处添加失败提示
+                            }
+                        }
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "icloud.and.arrow.up")
+                            .rotationEffect(.degrees(isManualSyncing ? 360 : 0))
+                            .animation(isManualSyncing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isManualSyncing)
+                        Text("手动同步 iCloud 数据")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Theme.color(.accent, scheme: themeManager.colorScheme ?? .light))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(!isICloudSyncEnabled || isManualSyncing) // 在未启用 iCloud 或正在同步时禁用按钮
+            }
+
             Section(header: Text("HealthKit 集成")) {
                 HStack {
                     Image(systemName: "heart.text.square.fill")

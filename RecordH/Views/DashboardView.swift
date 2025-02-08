@@ -155,6 +155,12 @@ struct MetricCard: View {
                       value <= (type.normalRange.max ?? Double.infinity)
         case .distance:
             isNormal = value >= (type.normalRange.min ?? 0)
+        case .bloodOxygen:
+            isNormal = value >= (type.normalRange.min ?? 0) && 
+                      value <= (type.normalRange.max ?? Double.infinity)
+        case .bodyFat:
+            isNormal = value >= (type.normalRange.min ?? 0) && 
+                      value <= (type.normalRange.max ?? Double.infinity)
         default:
             return StatusIcon(icon: "", color: .clear)
         }
@@ -191,6 +197,10 @@ struct MetricCard: View {
             return "waveform.path.ecg"
         case .distance:
             return "figure.walk.motion"
+        case .bloodOxygen:
+            return "lungs.fill"
+        case .bodyFat:
+            return "figure.arms.open"
         }
     }
     
@@ -223,7 +233,8 @@ struct MetricCard: View {
                         .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     
                     if type == .steps || type == .sleep || type == .flightsClimbed ||
-                       type == .activeEnergy || type == .heartRate || type == .distance {
+                       type == .activeEnergy || type == .heartRate || type == .distance ||
+                       type == .bloodOxygen || type == .bodyFat {
                         let statusIcon = getStatusIcon(type: type, value: record.value)
                         Image(systemName: statusIcon.icon)
                             .foregroundColor(statusIcon.color)

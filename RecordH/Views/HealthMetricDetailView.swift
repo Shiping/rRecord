@@ -26,9 +26,6 @@ struct HealthMetricDetailView: View {
     @State private var selectedTimeFilter: TimeFilterOption = .year
     
     var filteredRecords: [HealthRecord] {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
         let allRecords = healthStore.getRecords(for: type)
         
         // Filter by date if needed
@@ -106,31 +103,10 @@ struct HealthMetricDetailView: View {
             isPresented: $showingAddRecord,
             editingRecord: recordToEdit
         )
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-        var records = healthStore.getRecords(for: type)
-        if let days = selectedTimeFilter.days {
-            let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-            records = records.filter { $0.date >= cutoffDate }
-        }
-        return records.reversed() // Show newest records first
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     }
     
     var body: some View {
         VStack {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
             timeFilterPicker
             
             List {
@@ -150,125 +126,6 @@ struct HealthMetricDetailView: View {
             .sheet(isPresented: $showingAddRecord) {
                 addRecordSheet
             }
-=======
-            Picker("时间筛选", selection: $selectedTimeFilter) {
-                ForEach(TimeFilterOption.allCases, id: \.self) { option in
-                    Text(option.rawValue).tag(option)
-                }
-=======
-            Picker("时间筛选", selection: $selectedTimeFilter) {
-                ForEach(TimeFilterOption.allCases, id: \.self) { option in
-                    Text(option.rawValue).tag(option)
-                }
->>>>>>> Stashed changes
-=======
-            Picker("时间筛选", selection: $selectedTimeFilter) {
-                ForEach(TimeFilterOption.allCases, id: \.self) { option in
-                    Text(option.rawValue).tag(option)
-                }
->>>>>>> Stashed changes
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            
-            List {
-                if type == .weight {
-                    // Weight and BMI Charts
-                    VStack(spacing: 20) {
-                        WeightChartSection(records: filteredRecords)
-                            .frame(height: 200)
-                        
-                        BMIChartSection(records: filteredRecords, healthStore: healthStore)
-                            .frame(height: 200)
-                    }
-                    .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
-                    .listRowInsets(EdgeInsets())
-                    .padding()
-                } else if type == .bloodPressure {
-                    // Blood Pressure Charts
-                    VStack(spacing: 20) {
-                        BloodPressureChartSection(
-                            records: filteredRecords,
-                            title: "收缩压",
-                            valueSelector: { $0.value },
-                            normalRange: type.normalRange,
-                            color: Theme.color(.accent, scheme: colorScheme)
-                        )
-                        .frame(height: 200)
-                        
-                        BloodPressureChartSection(
-                            records: filteredRecords,
-                            title: "舒张压",
-                            valueSelector: { $0.secondaryValue ?? 0 },
-                            normalRange: type.secondaryNormalRange ?? (min: nil, max: nil),
-                            color: Theme.color(.secondaryText, scheme: colorScheme)
-                        )
-                        .frame(height: 200)
-                    }
-                    .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
-                    .listRowInsets(EdgeInsets())
-                    .padding()
-                } else {
-                    ChartSection(records: filteredRecords, type: type, healthStore: healthStore)
-                        .frame(height: 200)
-                        .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
-                        .listRowInsets(EdgeInsets())
-                        .padding()
-                }
-                
-                ForEach(Array(filteredRecords.enumerated()), id: \.element.id) { index, record in
-                    RecordRow(record: record, type: type, recordNumber: index + 1, healthStore: healthStore)
-                        .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                healthStore.deleteHealthRecord(record.id)
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
-                            
-                            Button {
-                                editRecord(record)
-                            } label: {
-                                Label("编辑", systemImage: "pencil")
-                            }
-                            .tint(.orange)
-                        }
-                }
-            }
-            .background(Theme.gradientBackground(for: colorScheme))
-            .navigationTitle(type.displayName)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    HStack {
-                        Image(systemName: "heart.text.square.fill")
-                            .foregroundColor(.red)
-                        Text("来自HealthKit")
-                            .font(.caption)
-                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddRecord = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                    }
-                }
-            }
-            .sheet(isPresented: $showingAddRecord) {
-                AddRecordSheet(
-                    type: type,
-                    healthStore: healthStore,
-                    isPresented: $showingAddRecord,
-                    editingRecord: recordToEdit
-                )
-            }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         }
     }
     
@@ -276,9 +133,7 @@ struct HealthMetricDetailView: View {
         recordToEdit = record
         showingAddRecord = true
     }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+    
     private var weightCharts: some View {
         VStack(spacing: 20) {
             WeightChartSection(records: filteredRecords, healthStore: healthStore)
@@ -343,18 +198,3 @@ struct HealthMetricDetailView: View {
         type: .weight
     )
 }
-=======
-}
-
-[Previous content...]
->>>>>>> Stashed changes
-=======
-}
-
-[Previous content...]
->>>>>>> Stashed changes
-=======
-}
-
-[Previous content...]
->>>>>>> Stashed changes

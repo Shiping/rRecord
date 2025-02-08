@@ -20,7 +20,7 @@ struct AddRecordSheet: View {
               let weight = value,
               let height = healthStore.userProfile?.height,
               height > 0 else { return nil }
-        return weight / (height * height)
+        return weight / ((height / 100) * (height / 100))
     }
     
     init(type: HealthRecord.RecordType, healthStore: HealthStore, isPresented: Binding<Bool>, editingRecord: HealthRecord? = nil) {

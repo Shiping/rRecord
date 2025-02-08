@@ -30,7 +30,7 @@ class HealthStore: ObservableObject {
         print("Initializing HealthStore")
         createDirectoryIfNeeded()
         migrateDataIfNeeded()
-        // Defer loadData until after authorization
+        loadData() // Load saved data immediately during initialization
     }
     
     private func migrateDataIfNeeded() {
@@ -55,7 +55,9 @@ class HealthStore: ObservableObject {
               let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
               let restingEnergyType = HKObjectType.quantityType(forIdentifier: .basalEnergyBurned),
               let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate),
-              let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+              let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
+              let oxygenSaturationType = HKObjectType.quantityType(forIdentifier: .oxygenSaturation),
+              let bodyFatType = HKObjectType.quantityType(forIdentifier: .bodyFatPercentage) else {
             completion(false)
             return
         }
@@ -67,7 +69,9 @@ class HealthStore: ObservableObject {
             activeEnergyType,
             restingEnergyType,
             heartRateType,
-            distanceType
+            distanceType,
+            oxygenSaturationType,
+            bodyFatType
         ]
         
         print("Requesting authorization for health data types")
@@ -83,11 +87,11 @@ class HealthStore: ObservableObject {
             DispatchQueue.main.async {
                 if success {
                     print("Authorization successful")
-                    self.loadData() // Load saved data first
-                    self.queueHealthDataFetch() // Then queue health data fetches
+                    self.queueHealthDataFetch() // Only fetch health data after authorization
                     completion(true)
                 } else {
                     print("Authorization failed: \(String(describing: error?.localizedDescription))")
+                    // Even if health authorization fails, local data is already loaded from init()
                     completion(false)
                 }
             }
@@ -97,16 +101,16 @@ class HealthStore: ObservableObject {
     private func loadData() {
         let decoder = JSONDecoder()
         
-        // Load user profile
+        // Load from local storage
         if let profileData = try? Data(contentsOf: profileURL),
            let profile = try? decoder.decode(UserProfile.self, from: profileData) {
             userProfile = profile
         }
         
-        // Load health records
         if let recordsData = try? Data(contentsOf: recordsURL),
            let records = try? decoder.decode([HealthRecord].self, from: recordsData) {
             healthRecords = records
+            recalculateBMI()
         }
         
         // Load daily notes
@@ -114,13 +118,49 @@ class HealthStore: ObservableObject {
            let notes = try? decoder.decode([DailyNote].self, from: notesData) {
             dailyNotes = notes
         }
+        
+        // Load from iCloud if enabled and merge
+        if isICloudSyncEnabled() {
+            let store = NSUbiquitousKeyValueStore.default
+            
+            if let profileData = store.data(forKey: "userProfile"),
+               let iCloudProfile = try? decoder.decode(UserProfile.self, from: profileData) {
+                userProfile = iCloudProfile // Prioritize iCloud data
+            }
+            
+            if let recordsData = store.data(forKey: "healthRecords"),
+               let iCloudRecords = try? decoder.decode([HealthRecord].self, from: recordsData) {
+                // Merge iCloud records with local records
+                for iCloudRecord in iCloudRecords {
+                    if let index = healthRecords.firstIndex(where: { $0.id == iCloudRecord.id }) {
+                        healthRecords[index] = iCloudRecord // Prioritize iCloud data
+                    } else {
+                        healthRecords.append(iCloudRecord)
+                    }
+                }
+                recalculateBMI()
+            }
+            
+            if let notesData = store.data(forKey: "dailyNotes"),
+               let iCloudNotes = try? decoder.decode([DailyNote].self, from: notesData) {
+                // Merge iCloud notes with local notes
+                for iCloudNote in iCloudNotes {
+                    if let index = dailyNotes.firstIndex(where: { $0.id == iCloudNote.id }) {
+                        dailyNotes[index] = iCloudNote // Prioritize iCloud data
+                    } else {
+                        dailyNotes.append(iCloudNote)
+                    }
+                }
+            }
+        }
     }
     
     private func saveData() {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        
+        // Save to local storage
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            
             // Save user profile
             if let profile = userProfile {
                 let profileData = try encoder.encode(profile)
@@ -138,9 +178,40 @@ class HealthStore: ObservableObject {
         } catch {
             print("Error saving data: \(error.localizedDescription)")
         }
+        
+        // Save to iCloud if enabled
+        if isICloudSyncEnabled() {
+            let store = NSUbiquitousKeyValueStore.default
+            
+            // Save user profile
+            if let profile = userProfile, let profileData = try? encoder.encode(profile) {
+                store.set(profileData, forKey: "userProfile")
+            }
+            
+            // Save health records
+            if let recordsData = try? encoder.encode(healthRecords) {
+                store.set(recordsData, forKey: "healthRecords")
+            }
+            
+            // Save daily notes
+            if let notesData = try? encoder.encode(dailyNotes) {
+                store.set(notesData, forKey: "dailyNotes")
+            }
+            
+            store.synchronize()
+        }
+    }
+    
+    func isICloudSyncEnabled() -> Bool {
+        return UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
     }
     
     // MARK: - Public Methods
+    
+    func manualSyncToICloud(completion: @escaping (Bool) -> Void) {
+        saveData()
+        completion(true) // 假设同步总是成功，可以根据实际情况修改
+    }
     
     func updateProfile(_ profile: UserProfile) {
         userProfile = profile
@@ -224,6 +295,19 @@ class HealthStore: ObservableObject {
         }
     }
     
+    func recalculateBMI() {
+        guard let height = userProfile?.height else { return }
+        
+        for index in healthRecords.indices {
+            if healthRecords[index].type == .weight {
+                let weight = healthRecords[index].value
+                let bmi = weight / ((height / 100) * (height / 100))
+                healthRecords[index].secondaryValue = bmi
+            }
+        }
+        saveData()
+    }
+    
     // Queue health data fetches with delay between each
     private func queueHealthDataFetch() {
         let fetchQueue = DispatchQueue(label: "com.recordh.healthfetch")
@@ -249,6 +333,12 @@ class HealthStore: ObservableObject {
             Thread.sleep(forTimeInterval: delay)
             
             self.fetchTodayDistance()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchLatestBloodOxygen()
+            Thread.sleep(forTimeInterval: delay)
+            
+            self.fetchLatestBodyFat()
         }
     }
     
@@ -295,32 +385,74 @@ class HealthStore: ObservableObject {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
         
         let now = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)!
-        let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: now, options: .strictStartDate)
+        let calendar = Calendar.current
+        
+        // Get noon today as the end time to ensure we capture late sleepers
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = 12
+        components.minute = 0
+        components.second = 0
+        let endTime = calendar.date(from: components) ?? now
+        
+        // Get 6:00 PM two days ago as the start time to ensure we capture early sleepers
+        let twoDaysAgoComponents = calendar.date(byAdding: .day, value: -2, to: endTime)!
+        components = calendar.dateComponents([.year, .month, .day], from: twoDaysAgoComponents)
+        components.hour = 18
+        components.minute = 0
+        components.second = 0
+        let startTime = calendar.date(from: components)!
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startTime, end: endTime, options: .strictStartDate)
+        
+        print("Fetching sleep data from \(startTime) to \(endTime)")
         
         let query = HKSampleQuery(sampleType: sleepType,
                                 predicate: predicate,
                                 limit: HKObjectQueryNoLimit,
                                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { [weak self] _, samples, error in
-            guard let self = self,
-                  let samples = samples as? [HKCategorySample] else {
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("Error fetching sleep data: \(error.localizedDescription)")
                 return
             }
             
+            guard let samples = samples as? [HKCategorySample] else {
+                print("No sleep samples found")
+                return
+            }
+            
+            print("Found \(samples.count) sleep samples")
+            
+            // Group samples by date to handle sleep segments
+            let calendar = Calendar.current
+            let groupedSamples = Dictionary(grouping: samples) { sample in
+                calendar.startOfDay(for: sample.startDate)
+            }
+            
+            // Find the most recent day with sleep data
+            let sortedDays = groupedSamples.keys.sorted(by: >)
+            let mostRecentSamples = sortedDays.first.flatMap { groupedSamples[$0] } ?? []
+            
+            print("Processing sleep data for: \(sortedDays.first?.description ?? "unknown date")")
+            
             var totalSleepDuration: TimeInterval = 0
-            for sample in samples {
-                if sample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue {
-                    totalSleepDuration += sample.endDate.timeIntervalSince(sample.startDate)
+            for sample in mostRecentSamples {
+                // Include all sleep states
+                if sample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue ||
+                   sample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
+                   sample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
+                   sample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue {
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate)
+                    print("Sleep segment: \(sample.startDate) to \(sample.endDate), duration: \(duration/3600) hours")
+                    totalSleepDuration += duration
                 }
             }
             
             let sleepHours = totalSleepDuration / 3600
+            print("Total sleep duration: \(sleepHours) hours")
             
-            guard sleepHours > 0 else {
-                print("No valid sleep data found.")
-                return
-            }
-            
+            // Always create a record, even if sleep hours is 0
             let hours = Int(sleepHours)
             let minutes = Int((sleepHours - Double(hours)) * 60)
             
@@ -490,6 +622,70 @@ class HealthStore: ObservableObject {
                                     value: distance,
                                     secondaryValue: nil,
                                     unit: "公里")
+            
+            DispatchQueue.main.async {
+                self.addHealthRecord(record)
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    private func fetchLatestBloodOxygen() {
+        guard let oxygenSaturationType = HKObjectType.quantityType(forIdentifier: .oxygenSaturation) else { return }
+        
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(quantityType: oxygenSaturationType,
+                                    quantitySamplePredicate: predicate,
+                                    options: .discreteAverage) { [weak self] _, result, error in
+            guard let self = self,
+                  let result = result,
+                  let average = result.averageQuantity() else {
+                return
+            }
+            
+            let oxygenSaturation = average.doubleValue(for: HKUnit.percent()) * 100 // Convert to percentage
+            let record = HealthRecord(id: UUID(),
+                                    date: now,
+                                    type: .bloodOxygen,
+                                    value: oxygenSaturation,
+                                    secondaryValue: nil,
+                                    unit: "%")
+            
+            DispatchQueue.main.async {
+                self.addHealthRecord(record)
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    private func fetchLatestBodyFat() {
+        guard let bodyFatType = HKObjectType.quantityType(forIdentifier: .bodyFatPercentage) else { return }
+        
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(quantityType: bodyFatType,
+                                    quantitySamplePredicate: predicate,
+                                    options: .discreteAverage) { [weak self] _, result, error in
+            guard let self = self,
+                  let result = result,
+                  let average = result.averageQuantity() else {
+                return
+            }
+            
+            let bodyFat = average.doubleValue(for: HKUnit.percent()) * 100 // Convert to percentage
+            let record = HealthRecord(id: UUID(),
+                                    date: now,
+                                    type: .bodyFat,
+                                    value: bodyFat,
+                                    secondaryValue: nil,
+                                    unit: "%")
             
             DispatchQueue.main.async {
                 self.addHealthRecord(record)

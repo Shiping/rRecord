@@ -82,7 +82,17 @@ struct BMIChartSection: View {
     var bmiRecords: [(date: Date, bmi: Double)] {
         records.compactMap { record in
             guard let userProfile = healthStore.userProfile else { return nil }
-            let bmi = record.value / (userProfile.height * userProfile.height)
+            // Height is in cm, weight in kg
+            let heightInMeters = userProfile.height / 100 // Convert height from cm to m
+            let bmi = record.value / (heightInMeters * heightInMeters) // weight(kg) / height(m)²
+            
+            // Debug print for BMI calculation
+            print("BMI Calculation:")
+            print("Height (cm): \(userProfile.height)")
+            print("Height (m): \(heightInMeters)")
+            print("Weight (kg): \(record.value)")
+            print("BMI: \(bmi)")
+            
             return (record.date, bmi)
         }
     }
@@ -94,35 +104,46 @@ struct BMIChartSection: View {
             
             if !bmiRecords.isEmpty {
                 Chart(bmiRecords, id: \.date) { record in
-                    // Add background for normal range
-                    if let min = HealthRecord.RecordType.weight.normalRange.min,
-                       let max = HealthRecord.RecordType.weight.normalRange.max {
-                        RectangleMark(
-                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
-                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
-                            yStart: .value("Normal Min", min),
-                            yEnd: .value("Normal Max", max)
-                        )
-                        .foregroundStyle(Color.green.opacity(0.1))
-                        
-                        // Add background for abnormal ranges
-                        RectangleMark(
-                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
-                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
-                            yStart: .value("Min", min - 5),
-                            yEnd: .value("Normal Min", min)
-                        )
-                        .foregroundStyle(Color.red.opacity(0.05))
-                        
-                        RectangleMark(
-                            xStart: .value("Start", bmiRecords.first?.date ?? Date()),
-                            xEnd: .value("End", bmiRecords.last?.date ?? Date()),
-                            yStart: .value("Normal Max", max),
-                            yEnd: .value("Max", max + 5)
-                        )
-                        .foregroundStyle(Color.red.opacity(0.05))
-                    }
+                    let normalBMIMin = 18.5
+                    let normalBMIMax = 24.9
+                    
+                    // Normal range background
+                    RectangleMark(
+                        xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                        xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                        yStart: .value("Normal Min", normalBMIMin),
+                        yEnd: .value("Normal Max", normalBMIMax)
+                    )
+                    .foregroundStyle(Color.green.opacity(0.1))
+                    
+                    // Underweight range background
+                    RectangleMark(
+                        xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                        xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                        yStart: .value("Min", 10), // Show some context below
+                        yEnd: .value("Normal Min", normalBMIMin)
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                    
+                    // Overweight range background
+                    RectangleMark(
+                        xStart: .value("Start", bmiRecords.first?.date ?? Date()),
+                        xEnd: .value("End", bmiRecords.last?.date ?? Date()),
+                        yStart: .value("Normal Max", normalBMIMax),
+                        yEnd: .value("Max", 40) // Show some context above
+                    )
+                    .foregroundStyle(Color.red.opacity(0.05))
+                    
+                    // Add guide lines for BMI ranges
+                    RuleMark(y: .value("Normal Min", normalBMIMin))
+                        .foregroundStyle(.gray.opacity(0.3))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    
+                    RuleMark(y: .value("Normal Max", normalBMIMax))
+                        .foregroundStyle(.gray.opacity(0.3))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
 
+                    // Plot BMI line and points
                     LineMark(
                         x: .value("Date", record.date),
                         y: .value("BMI", record.bmi)

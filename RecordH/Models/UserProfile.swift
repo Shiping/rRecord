@@ -18,7 +18,7 @@ struct HealthRecord: Identifiable, Codable {
     let date: Date
     let type: RecordType
     let value: Double
-    let secondaryValue: Double? // For blood pressure's diastolic value
+    var secondaryValue: Double? // For blood pressure's diastolic value
     let unit: String
     var note: String?
     
@@ -35,6 +35,8 @@ struct HealthRecord: Identifiable, Codable {
         case restingEnergy
         case heartRate
         case distance
+        case bloodOxygen
+        case bodyFat
         
         var normalRange: (min: Double?, max: Double?) {
             switch self {
@@ -62,6 +64,10 @@ struct HealthRecord: Identifiable, Codable {
                 return (60, 100) // 正常心率范围
             case .distance:
                 return (3, nil) // 建议每天步行3公里以上
+            case .bloodOxygen:
+                return (94, 100) // 正常血氧范围
+            case .bodyFat:
+                return (10, 25) // 正常体脂率范围
             }
         }
         
@@ -88,6 +94,8 @@ struct HealthRecord: Identifiable, Codable {
             case .restingEnergy: return "千卡"
             case .heartRate: return "次/分"
             case .distance: return "公里"
+            case .bloodOxygen: return "%"
+            case .bodyFat: return "%"
             }
         }
         
@@ -105,6 +113,8 @@ struct HealthRecord: Identifiable, Codable {
             case .restingEnergy: return "基础能量"
             case .heartRate: return "心率"
             case .distance: return "运动距离"
+            case .bloodOxygen: return "血氧"
+            case .bodyFat: return "体脂率"
             }
         }
         
