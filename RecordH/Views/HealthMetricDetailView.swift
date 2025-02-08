@@ -28,6 +28,7 @@ struct HealthMetricDetailView: View {
     var filteredRecords: [HealthRecord] {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         let allRecords = healthStore.getRecords(for: type)
         
         // Filter by date if needed
@@ -108,6 +109,8 @@ struct HealthMetricDetailView: View {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         var records = healthStore.getRecords(for: type)
         if let days = selectedTimeFilter.days {
             let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
@@ -115,6 +118,9 @@ struct HealthMetricDetailView: View {
         }
         return records.reversed() // Show newest records first
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -122,6 +128,7 @@ struct HealthMetricDetailView: View {
     
     var body: some View {
         VStack {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
             timeFilterPicker
@@ -148,6 +155,12 @@ struct HealthMetricDetailView: View {
                 ForEach(TimeFilterOption.allCases, id: \.self) { option in
                     Text(option.rawValue).tag(option)
                 }
+=======
+            Picker("时间筛选", selection: $selectedTimeFilter) {
+                ForEach(TimeFilterOption.allCases, id: \.self) { option in
+                    Text(option.rawValue).tag(option)
+                }
+>>>>>>> Stashed changes
 =======
             Picker("时间筛选", selection: $selectedTimeFilter) {
                 ForEach(TimeFilterOption.allCases, id: \.self) { option in
@@ -250,6 +263,9 @@ struct HealthMetricDetailView: View {
                 )
             }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -260,6 +276,7 @@ struct HealthMetricDetailView: View {
         recordToEdit = record
         showingAddRecord = true
     }
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
     private var weightCharts: some View {
@@ -326,6 +343,11 @@ struct HealthMetricDetailView: View {
         type: .weight
     )
 }
+=======
+}
+
+[Previous content...]
+>>>>>>> Stashed changes
 =======
 }
 
