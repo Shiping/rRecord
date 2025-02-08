@@ -392,6 +392,8 @@ struct DailyRecommendationsView: View {
     @ObservedObject var healthStore: HealthStore
     @State private var isGeneratingAdvice = false
     @State private var adviceContent: String? = nil
+    @State private var userDescription: String = "" // State for user description input
+    @State private var healthDataSummary: String? = nil // State for health data summary
 
     var todaysAdvice: DailyNote? {
         healthStore.dailyNotes
@@ -412,11 +414,52 @@ struct DailyRecommendationsView: View {
                 }
                 .disabled(isGeneratingAdvice)
             }
+            
+            // User description input
+            TextField("在此输入您的健康状态描述 (可选)", text: $userDescription)
+                .textFieldStyle(.roundedBorder)
+                .padding(.bottom, 10)
 
             if let content = adviceContent { // 使用 adviceContent
-                Text(content)
-                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                    .font(.body)
+                var processedContent = content.replacingOccurrences(of: "\n", with: "  \n")
+                if let attributedString = try? AttributedString(markdown: processedContent) {
+                    Text(attributedString)
+                        .lineSpacing(8)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        .font(.body)
+                } else {
+                    Text("Error rendering advice")
+                        .foregroundColor(.red)
+                        .font(.body)
+                }
+                
+                // Display health data summary and user description
+                if let summary = healthDataSummary, !summary.isEmpty || !userDescription.isEmpty {
+                    VStack(alignment: .leading) {
+                        Divider()
+                        if !summary.isEmpty {
+                            Text("健康数据梗概:")
+                                .font(.caption)
+                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
+                            Text(summary)
+                                .font(.caption2)
+                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
+                        }
+                        if !userDescription.isEmpty {
+                            Text("用户描述:")
+                                .font(.caption)
+                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
+                            Text(userDescription)
+                                .font(.caption2)
+                                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme)) // 柔和文字颜色
+                        }
+                    }
+                    .padding(.top, 8)
+                    .padding(.horizontal)
+                    .background(Theme.color(.background, scheme: colorScheme).opacity(0.3)) // Further weakened background
+                    .cornerRadius(5)
+                }
+
             } else if isGeneratingAdvice {
                 VStack {
                     ProgressView()
@@ -439,7 +482,16 @@ struct DailyRecommendationsView: View {
     private func generateAdvice() {
         isGeneratingAdvice = true
         adviceContent = nil // 点击按钮时先清空 adviceContent
-        healthStore.generateHealthAdvice { advice in
+        healthDataSummary = nil // 清空健康数据梗概
+        
+        let dataSummary = healthStore.getTodayHealthData()
+        var summaryText = ""
+        for (key, value) in dataSummary {
+            summaryText += "\(key): \(value)\n"
+        }
+        healthDataSummary = summaryText.trimmingCharacters(in: .newlines) // 保存健康数据梗概
+
+        healthStore.generateHealthAdvice(userDescription: userDescription) { advice in // Pass userDescription
             isGeneratingAdvice = false
             if let advice = advice {
                 adviceContent = advice // 获取到建议后更新 adviceContent

@@ -123,7 +123,7 @@ struct ProfileView: View {
                 .disabled(!HKHealthStore.isHealthDataAvailable())
             }
             
-            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。")) {
+            Section(header: Text("AI 助手设置"), footer: Text("启用 AI 助手后，系统将基于您的健康数据提供个性化建议。需要配置 Deepseek API 密钥才能使用此功能。用户可以配置其他模型。")) {
                 Toggle("启用 AI 健康建议", isOn: $isAIEnabled)
                 
                 if isAIEnabled {

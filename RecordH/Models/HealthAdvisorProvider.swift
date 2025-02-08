@@ -17,8 +17,9 @@ class HealthAdvisorProvider { // Renamed class
         self.config = config
     }
 
-    private func generatePrompt(healthData: [String: Any]) -> String {
+    private func generatePrompt(healthData: [String: Any], userDescription: String?) -> String {
         var parts: [String] = []
+        var descriptionPart: [String] = []
 
         if let steps = healthData["steps"] as? Int {
             parts.append("今日步数: \(steps)步")
@@ -53,11 +54,17 @@ class HealthAdvisorProvider { // Renamed class
         if let bodyFat = healthData["bodyFat"] as? Double {
             parts.append("体脂率: \(bodyFat)%")
         }
+        
+        if let userDescription = userDescription, !userDescription.isEmpty {
+            descriptionPart.append("用户描述: \(userDescription)")
+        }
 
         let prompt = """
-        基于用户的以下健康数据，请提供具体的健康建议：
+        基于用户的以下健康数据\(descriptionPart.isEmpty ? "" : "和用户描述")，请提供具体的健康建议：
         \(parts.joined(separator: "\n"))
+        \(descriptionPart.isEmpty ? "" : "\n" + descriptionPart.joined(separator: "\n"))
 
+        \n
         请从以下几个方面给出建议：
         1. 运动建议
         2. 睡眠建议
@@ -69,7 +76,7 @@ class HealthAdvisorProvider { // Renamed class
         return prompt
     }
 
-    func getHealthAdvice(healthData: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {
+    func getHealthAdvice(healthData: [String: Any], userDescription: String?, completion: @escaping (Result<String, Error>) -> Void) {
         guard let aiSettings = config.healthStore?.userProfile?.aiSettings, aiSettings.enabled else {
             completion(.failure(MCPError.networkError("AI功能未启用或未配置")))
             return
@@ -80,7 +87,7 @@ class HealthAdvisorProvider { // Renamed class
             return
         }
 
-        let prompt = generatePrompt(healthData: healthData)
+        let prompt = generatePrompt(healthData: healthData, userDescription: userDescription)
         let baseURL = aiSettings.deepseekBaseURL.isEmpty ? "https://api.deepseek.com/v1" : aiSettings.deepseekBaseURL
         let model = aiSettings.deepseekModel.isEmpty ? "deepseek-chat" : aiSettings.deepseekModel
 
@@ -148,7 +155,7 @@ class HealthAdvisorProvider { // Renamed class
     }
 
 
-    func useHealthAdvisor(healthData: [String: Any], completion: @escaping (Result<String, Error>) -> Void) { // Modified function
-        getHealthAdvice(healthData: healthData, completion: completion) // Call the Swift implementation
+    func useHealthAdvisor(healthData: [String: Any], userDescription: String?, completion: @escaping (Result<String, Error>) -> Void) { // Modified function
+        getHealthAdvice(healthData: healthData, userDescription: userDescription, completion: completion) // Call the Swift implementation
     }
 }

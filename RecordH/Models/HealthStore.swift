@@ -247,7 +247,7 @@ public class HealthStore: ObservableObject {
         return dailyNotes.filter { calendar.isDateInToday($0.date) }
     }
     
-    @objc public dynamic func generateHealthAdvice(completion: @escaping (String?) -> Void) {
+    @objc public dynamic func generateHealthAdvice(userDescription: String?, completion: @escaping (String?) -> Void) {
         guard let provider = healthAdvisorProvider, // updated provider name
               userProfile?.aiSettings.enabled == true else {
             print("AI建议功能未启用或未配置")
@@ -263,12 +263,10 @@ public class HealthStore: ObservableObject {
         
         let healthData = getTodayHealthData()
         
-        provider.useHealthAdvisor(healthData: healthData) { result in // useHealthAdvisor is still valid
+        provider.useHealthAdvisor(healthData: healthData, userDescription: userDescription) { result in // useHealthAdvisor is still valid
             DispatchQueue.main.async {
                 switch result {
                 case .success(let advice):
-                    let note = DailyNote(id: UUID(), date: Date(), content: advice, category: .aiAdvice)
-                    self.addDailyNote(note)
                     completion(advice)
                 case .failure(let error):
                     print("Failed to generate health advice: \(error.localizedDescription)")
@@ -283,7 +281,7 @@ public class HealthStore: ObservableObject {
         print("健康数据获取已加入队列")
     }
     
-    private func getTodayHealthData() -> [String: Any] {
+    public func getTodayHealthData() -> [String: Any] {
         var data: [String: Any] = [:]
         if let stepsRecord = getLatestRecord(for: .steps) {
             data["steps"] = stepsRecord.value
