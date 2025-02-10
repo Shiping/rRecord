@@ -147,6 +147,7 @@ private struct StatusIcon {
 
 struct MetricCard: View {
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     let type: HealthRecord.RecordType
     let record: HealthRecord?
     
@@ -178,7 +179,7 @@ struct MetricCard: View {
         
         return StatusIcon(
             icon: isNormal ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
-            color: isNormal ? .green : .red
+            color: isNormal ? Theme.color(.healthSuccess, scheme: colorScheme) : Theme.color(.healthWarning, scheme: colorScheme)
         )
     }
     
@@ -216,49 +217,154 @@ struct MetricCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header with icon and status
+            HStack(spacing: 16) {
+                // Icon with animated background
                 Image(systemName: iconName)
+                    .font(.system(size: 24, weight: .medium))
                     .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                Text(type.displayName)
-                    .font(.headline)
-            }
-            
-            if let record = record {
-                if type.needsSecondaryValue, let diastolic = record.secondaryValue {
-                    Text("\(String(format: "%.0f/%.0f", record.value, diastolic)) \(record.unit)")
-                        .font(.title2)
-                } else if type == .sleep {
-                    let hours = Int(record.value)
-                    let minutes = Int(record.secondaryValue ?? 0)
-                    Text("\(hours)小时\(minutes)分钟")
-                        .font(.title2)
-                } else {
-                    Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
-                        .font(.title2)
-                }
+                    .frame(width: 48, height: 48)
+                    .background(
+                        ZStack {
+                            Circle()
+                                .fill(Theme.color(.accent, scheme: colorScheme).opacity(0.1))
+                            Circle()
+                                .stroke(
+                                    Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                                    lineWidth: 1.5
+                                )
+                                .scaleEffect(isHovered ? 1.2 : 1.0)
+                                .opacity(isHovered ? 0 : 1)
+                                .animation(.easeInOut(duration: 1).repeatForever(autoreverses: false), value: isHovered)
+                        }
+                    )
+                    .onAppear { isHovered = true }
                 
-                HStack {
-                    Text(record.date.formatted(.dateTime.day().month()))
-                        .font(.caption)
-                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(type.displayName)
+                        .font(.headline)
                     
-                    if type == .steps || type == .sleep || type == .flightsClimbed ||
-                       type == .activeEnergy || type == .heartRate || type == .distance ||
-                       type == .bloodOxygen || type == .bodyFat {
+                    if let record = record,
+                       type == .steps || type == .sleep || type == .activeEnergy || 
+                       type == .heartRate || type == .distance || type == .bloodOxygen || 
+                       type == .bodyFat {
                         let statusIcon = getStatusIcon(type: type, value: record.value)
-                        Image(systemName: statusIcon.icon)
-                            .foregroundColor(statusIcon.color)
+                        HStack(spacing: 6) {
+                            Image(systemName: statusIcon.icon)
+                                .foregroundColor(statusIcon.color)
+                                .imageScale(.small)
+                            Text(statusIcon.icon == "checkmark.circle.fill" ? "正常" : "注意")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(statusIcon.color)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(statusIcon.color.opacity(0.15))
+                                )
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 12)
+            
+            // Value display section
+            if let record = record {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if type.needsSecondaryValue, let diastolic = record.secondaryValue {
+                            Text("\(String(format: "%.0f/%.0f", record.value, diastolic))")
+                                .font(.system(size: 32, weight: .semibold))
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                            Text(record.unit)
+                                .font(.headline)
+                                .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        } else if type == .sleep {
+                            let hours = Int(record.value)
+                            let minutes = Int(record.secondaryValue ?? 0)
+                            Text("\(hours)小时\(minutes)分钟")
+                                .font(.system(size: 32, weight: .semibold))
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        } else {
+                            Text(String(format: type == .steps ? "%.0f" : "%.1f", record.value))
+                                .font(.system(size: 32, weight: .semibold))
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                            Text(record.unit)
+                                .font(.headline)
+                                .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar")
+                            .font(.caption)
+                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        Text(record.date.formatted(.dateTime.day().month()))
+                            .font(.caption)
+                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     }
                 }
             } else {
-                Text("暂无数据")
-                    .font(.title2)
-                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                HStack(spacing: 8) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.title2)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                    Text("暂无数据")
+                        .font(.title3)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modernCard()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            ZStack {
+                Theme.cardGradient(for: colorScheme)
+                
+                // Decorative geometric patterns
+                GeometryReader { geometry in
+                    Path { path in
+                        let size = geometry.size
+                        path.move(to: CGPoint(x: 0, y: size.height * 0.7))
+                        path.addQuadCurve(
+                            to: CGPoint(x: size.width, y: size.height * 0.3),
+                            control: CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                        )
+                    }
+                    .stroke(
+                        Theme.color(.accent, scheme: colorScheme).opacity(0.05),
+                        lineWidth: 2
+                    )
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                            Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        )
+        .shadow(
+            color: Theme.color(.accent, scheme: colorScheme).opacity(colorScheme == .dark ? 0.2 : 0.1),
+            radius: colorScheme == .dark ? 12 : 8,
+            x: 0,
+            y: colorScheme == .dark ? 6 : 4
+        )
     }
 }
 
@@ -269,7 +375,7 @@ struct RecentNotesSection: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("最近笔记")
                     .font(.headline)
@@ -313,37 +419,132 @@ struct RecentNotesSection: View {
 
 private struct NoteSummaryCard: View {
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     let note: DailyNote
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                // Animated note icon
+                ZStack {
+                    Circle()
+                        .fill(Theme.color(.accent, scheme: colorScheme).opacity(0.1))
+                        .frame(width: 40, height: 40)
+                    
+                    Circle()
+                        .stroke(
+                            Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                            lineWidth: 1.5
+                        )
+                        .frame(width: 40, height: 40)
+                        .scaleEffect(isHovered ? 1.2 : 1.0)
+                        .opacity(isHovered ? 0 : 1)
+                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: false), value: isHovered)
+                    
+                    Image(systemName: "note.text")
+                        .font(.system(size: 20))
+                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                }
+                .onAppear { isHovered = true }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(note.date.formatted(.dateTime.month().day()))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                    
+                    Text(note.date.formatted(.dateTime.hour().minute()))
+                        .font(.caption)
+                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                }
+            }
+            
             Text(note.content)
                 .lineLimit(3)
                 .foregroundColor(Theme.color(.text, scheme: colorScheme))
             
-            HStack {
-                Text(note.date.formatted(.dateTime.month().day().hour().minute()))
-                    .font(.caption)
-                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
-                
-                if !note.tags.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(note.tags, id: \.self) { tag in
+            if !note.tags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(note.tags, id: \.self) { tag in
+                            HStack(spacing: 4) {
+                                Image(systemName: "tag.fill")
+                                    .font(.system(size: 10))
                                 Text(tag)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Theme.color(.accent, scheme: colorScheme).opacity(0.2))
-                                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                                    .cornerRadius(8)
+                                    .fontWeight(.medium)
                             }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(Theme.color(.accent, scheme: colorScheme).opacity(0.15))
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [
+                                                        Theme.color(.accent, scheme: colorScheme).opacity(0.3),
+                                                        Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                                                    ],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1
+                                            )
+                                    )
+                            )
+                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                         }
                     }
+                    .padding(.horizontal, 4)
                 }
             }
         }
-        .modernCard()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            ZStack {
+                Theme.cardGradient(for: colorScheme)
+                
+                // Decorative patterns
+                GeometryReader { geometry in
+                    Path { path in
+                        let size = geometry.size
+                        path.move(to: CGPoint(x: 0, y: size.height * 0.8))
+                        path.addQuadCurve(
+                            to: CGPoint(x: size.width, y: size.height * 0.2),
+                            control: CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                        )
+                    }
+                    .stroke(
+                        Theme.color(.accent, scheme: colorScheme).opacity(0.05),
+                        lineWidth: 1.5
+                    )
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                            Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        )
+        .shadow(
+            color: Theme.color(.accent, scheme: colorScheme).opacity(colorScheme == .dark ? 0.2 : 0.1),
+            radius: colorScheme == .dark ? 12 : 8,
+            x: 0,
+            y: colorScheme == .dark ? 6 : 4
+        )
     }
 }
 
@@ -406,6 +607,44 @@ struct DailyRecommendationsView: View {
     @State private var userDescription: String = ""
     @State private var showingConfigPicker = false
     
+    // 优化配置选择器样式
+    private var configButton: some View {
+        Menu {
+            ForEach(healthStore.userProfile?.aiSettings ?? [], id: \.id) { config in
+                Button(action: {
+                    healthStore.updateSelectedAIConfiguration(config.id)
+                    generateAdvice()
+                }) {
+                    HStack {
+                        Text(config.name)
+                        if config.id == healthStore.userProfile?.selectedAIConfigurationId {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(currentConfigName)
+                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                Image(systemName: "chevron.down")
+                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                    .font(.caption)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Theme.color(.cardBackground, scheme: colorScheme))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Theme.color(.cardBorder, scheme: colorScheme), lineWidth: 1)
+                    )
+            )
+        }
+    }
+    
     private var currentConfigName: String {
         if let id = healthStore.userProfile?.selectedAIConfigurationId,
            let config = healthStore.userProfile?.aiSettings.first(where: { $0.id == id }) {
@@ -424,20 +663,7 @@ struct DailyRecommendationsView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    showingConfigPicker = true
-                }) {
-                    HStack {
-                        Text(currentConfigName)
-                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                        Image(systemName: "chevron.down")
-                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Theme.color(.background, scheme: colorScheme))
-                    .cornerRadius(8)
-                }
+                configButton
                 
                 Button(action: generateAdvice) {
                     Image(systemName: "arrow.clockwise")
@@ -448,62 +674,148 @@ struct DailyRecommendationsView: View {
             }
 
             TextField("在此输入您的健康状态描述 (可选)", text: $userDescription)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(PlainTextFieldStyle())
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.color(.cardBackground, scheme: colorScheme))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Theme.color(.cardBorder, scheme: colorScheme), lineWidth: 1)
+                        )
+                )
                 .padding(.bottom, 10)
 
             if let adviceText = adviceText {
-                VStack(alignment: .leading, spacing: 12) {
-                    // 主要建议内容
-                    Text(adviceText)
-                        .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // 分隔线
-                    Divider()
-                    
-                    // 用户输入和健康数据摘要 (弱化显示)
-                    if !userDescription.isEmpty {
-                        Text("用户描述：\(userDescription)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 20) {
+                    // AI Icon and advice
+                    HStack(alignment: .top, spacing: 16) {
+                        // Animated AI icon with ripple effect
+                        ZStack {
+                            Circle()
+                                .fill(Theme.color(.accent, scheme: colorScheme).opacity(0.1))
+                                .frame(width: 48, height: 48)
+                            
+                            ForEach(0..<3) { index in
+                                Circle()
+                                    .stroke(
+                                        Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                                        lineWidth: 1
+                                    )
+                                    .frame(width: 48, height: 48)
+                                    .scaleEffect(isGeneratingAdvice ? 1.5 : 1.0)
+                                    .opacity(isGeneratingAdvice ? 0 : 1)
+                                    .animation(
+                                        Animation.easeInOut(duration: 1.5)
+                                            .repeatForever(autoreverses: false)
+                                            .delay(Double(index) * 0.5),
+                                        value: isGeneratingAdvice
+                                    )
+                            }
+                            
+                            Image(systemName: "brain.head.profile")
+                                .font(.system(size: 24))
+                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        }
+                        
+                        // Advice content with creative styling
+                        Text(adviceText)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Theme.color(.cardBackground, scheme: colorScheme))
+                                    
+                                    // Subtle pattern overlay
+                                    GeometryReader { geometry in
+                                        Path { path in
+                                            let size = geometry.size
+                                            path.move(to: CGPoint(x: 0, y: size.height * 0.7))
+                                            path.addQuadCurve(
+                                                to: CGPoint(x: size.width, y: size.height * 0.3),
+                                                control: CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                                            )
+                                        }
+                                        .stroke(
+                                            Theme.color(.accent, scheme: colorScheme).opacity(0.05),
+                                            lineWidth: 1.5
+                                        )
+                                    }
+                                }
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [
+                                                Theme.color(.accent, scheme: colorScheme).opacity(0.3),
+                                                Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1.5
+                                    )
+                            )
                     }
                     
-                    // 标题
-                    Text("建议生成依据")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 16) {
+                        if !userDescription.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("用户描述")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                                Text(userDescription)
+                                    .font(.callout)
+                                    .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                            }
+                            .padding(.horizontal)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "chart.bar.fill")
+                                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                                Text("建议生成依据")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                            }
                     
-                    // 使用的所有健康数据
-                    Grid(alignment: .leading) {
-                        ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
-                            GridRow {
-                                Text("\(type.displayName):")
-                                    .gridColumnAlignment(.leading)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                
-                                if let record = healthStore.getLatestRecord(for: type) {
-                                    HStack(spacing: 4) {
-                                        if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
-                                            Text("\(String(format: "%.1f", record.value))/\(String(format: "%.1f", secondaryValue)) \(record.unit)")
-                                        } else if type == .sleep {
-                                            let hours = Int(record.value)
-                                            let minutes = Int(record.secondaryValue ?? 0)
-                                            Text("\(hours)小时\(minutes)分钟")
+                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                                ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
+                                    GridRow {
+                                        Text("\(type.displayName):")
+                                            .gridColumnAlignment(.leading)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        
+                                        if let record = healthStore.getLatestRecord(for: type) {
+                                            HStack(spacing: 4) {
+                                                if type.needsSecondaryValue, let secondaryValue = record.secondaryValue {
+                                                    Text("\(String(format: "%.1f", record.value))/\(String(format: "%.1f", secondaryValue)) \(record.unit)")
+                                                } else if type == .sleep {
+                                                    let hours = Int(record.value)
+                                                    let minutes = Int(record.secondaryValue ?? 0)
+                                                    Text("\(hours)小时\(minutes)分钟")
+                                                } else {
+                                                    Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
+                                                }
+                                                Text("(\(record.date.formatted(.dateTime.month().day())))")
+                                            }
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
                                         } else {
-                                            Text("\(String(format: type == .steps ? "%.0f" : "%.1f", record.value)) \(record.unit)")
+                                            Text("暂无数据")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary.opacity(0.7))
                                         }
-                                        Text("(\(record.date.formatted(.dateTime.month().day())))")
                                     }
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                } else {
-                                    Text("暂无数据")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary.opacity(0.7))
                                 }
                             }
+                            .padding(.vertical, 8)
                         }
                     }
                 }
