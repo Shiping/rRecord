@@ -2,6 +2,11 @@ import Foundation
 import SwiftUI
 import HealthKit
 
+private enum APIError: Error {
+    case notEnabled(String)
+    case notInitialized(String)
+}
+
 @available(macOS 10.13, iOS 15.0, *)
 public class HealthStore: ObservableObject {
     @Published var userProfile: UserProfile?
@@ -45,16 +50,16 @@ public class HealthStore: ObservableObject {
         }
     }
 
-    @objc public dynamic func generateHealthAdvice(userDescription: String?, completion: @escaping (String?) -> Void) {
+    func generateHealthAdvice(userDescription: String?, completion: @escaping (Result<[HealthAdvisorProvider.AdviceSection], Error>) -> Void) {
         guard let selectedConfigId = userProfile?.selectedAIConfigurationId,
               let config = userProfile?.aiSettings.first(where: { $0.id == selectedConfigId }),
               config.enabled else {
-            completion("请先在个人资料中启用 AI 配置")
+            completion(.failure(APIError.notEnabled("请先在个人资料中启用 AI 配置")))
             return
         }
 
         guard let provider = healthAdvisorProvider else {
-            completion("AI 助手未正确初始化")
+            completion(.failure(APIError.notInitialized("AI 助手未正确初始化")))
             return
         }
         
@@ -119,14 +124,7 @@ public class HealthStore: ObservableObject {
             userAge: userAge,
             userGender: userGender
         ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let advice):
-                    completion(advice)
-                case .failure(let error):
-                    completion("生成建议失败: \(error.localizedDescription)")
-                }
-            }
+            completion(result)
         }
     }
     
