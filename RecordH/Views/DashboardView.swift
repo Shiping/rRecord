@@ -737,6 +737,7 @@ struct DailyRecommendationsView: View {
                                         lineWidth: 1.5
                                     )
                             )
+                            .onAppear { print("AI Advice: \(adviceText)") }
                     }
                     
                     VStack(alignment: .leading, spacing: 16) {

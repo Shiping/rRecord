@@ -90,22 +90,22 @@ class HealthAdvisorProvider {
             descriptionPart.append("用户描述: \(userDescription)")
         }
 
-        let prompt = """
-        请基于以下用户\(demographicPart.isEmpty ? "" : "年龄和性别等")信息，并重点考虑用户当日的健康数据\(descriptionPart.isEmpty ? "" : "和用户描述")，给出个性化的健康建议：
-        \(demographicPart.isEmpty ? "" : demographicPart.joined(separator: "\\n") + "\\n")
-        \(parts.joined(separator: "\\n"))\(descriptionPart.isEmpty ? "" : "\\n" + descriptionPart.joined(separator: "\\n"))
+    let prompt = """
+    请基于以下用户\(demographicPart.isEmpty ? "" : "年龄和性别等")信息，并重点考虑用户当日的健康数据\(descriptionPart.isEmpty ? "" : "和用户描述")，给出个性化的健康建议：
+    \(demographicPart.isEmpty ? "" : demographicPart.joined(separator: "\\n") + "\\n")
+    \(parts.joined(separator: "\\n"))\(descriptionPart.isEmpty ? "" : "\\n" + parts.joined(separator: "\\n"))
 
-        \n
-        请从以下几个方面给出建议：\n
-        1. 运动建议 (结合今日步数、活动消耗、运动距离、爬楼等数据，尤其关注当日数据)\n
-        2. 睡眠建议 (结合最近睡眠时长)\n
-        3. 饮食建议 (结合体重、体脂率、血糖血脂尿酸、BMI等数据)\n
-        4. 今日特别注意事项 (综合所有数据，给出今日需要特别关注的健康问题)
+    \n
+    请从以下几个方面给出建议，**每条建议都请给出权威来源引用**，引用以 **[来源编号]** 的形式放在建议后。**如果可以找到对应参考文献的网页链接，请一并提供，并在文末的来源信息中包含链接地址**。例如：\n
+    1. 运动建议 (结合今日步数、活动消耗、运动距离、爬楼等数据，尤其关注当日数据)\n
+    2. 睡眠建议 (结合最近睡眠时长)\n
+    3. 饮食建议 (结合体重、体脂率、血糖血脂尿酸、BMI等数据)\n
+    4. 今日特别注意事项 (综合所有数据，给出今日需要特别关注的健康问题)
 
-        建议要具体可执行，并针对用户数据的特点给出个性化建议。
-        """
-        return prompt
-    }
+    建议要具体可执行，并针对用户数据的特点给出个性化建议。**请确保所有医疗健康建议都有可靠的来源引用，并尽可能提供参考文献的网页链接。**
+    """
+    return prompt
+}
 
     func getHealthAdvice(healthData: [String: Any], userDescription: String?, userAge: Int?, userGender: String?, completion: @escaping (Result<String, Error>) -> Void) {
         // 检查AI功能是否启用
