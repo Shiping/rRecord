@@ -95,37 +95,16 @@ private struct LatestMetricsGrid: View {
     @ObservedObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
     
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    
-    private var columns: [GridItem] {
-        // Use 3 columns on iPad in landscape
-        if horizontalSizeClass == .regular {
-            return [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ]
-        }
-        // Use 2 columns on iPhone or iPad in portrait
-        return [
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ]
-    }
-    
     var body: some View {
-        VStack(spacing: 10) {
-            LazyVGrid(columns: columns, spacing: 15) {
-                ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
-                    NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
-                        MetricCardWrapper(type: type, healthStore: healthStore)
-                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                    }
+        VStack(spacing: 15) { // Changed to VStack and adjusted spacing
+            ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
+                NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
+                    MetricCardWrapper(type: type, healthStore: healthStore)
+                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 }
             }
         }
-        // Add some padding for iPad
-        .padding(horizontalSizeClass == .regular ? 20 : 0)
+        .padding(.horizontal) // Keep horizontal padding
     }
 }
 
