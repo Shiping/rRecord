@@ -6,31 +6,69 @@ struct RecentNotesSection: View {
     @Binding var noteToEdit: DailyNote?
     @Environment(\.colorScheme) var colorScheme
     
+    @State private var showingHistoryView = false
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 16) {
+            // Title and add button
             HStack {
-                Text("今日记录")
-                    .font(.headline)
-                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                Button(action: { showingHistoryView = true }) {
+                    HStack {
+                        Text("今日记录")
+                            .font(.headline)
+                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                    }
+                }
                 
                 Spacer()
                 
-                Button(action: { showingAddNote = true }) {
+                Button(action: {
+                    noteToEdit = nil
+                    showingAddNote = true
+                }) {
                     Image(systemName: "plus.circle.fill")
                         .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                 }
             }
+            .padding(.horizontal, 16)
             
-            if let latestNote = healthStore.dailyNotes.sorted(by: { $0.date > $1.date }).first {
-                NoteSummaryCard(note: latestNote)
-                    .onTapGesture {
-                        noteToEdit = latestNote
-                        showingAddNote = true
+            let recentNotes = healthStore.dailyNotes.sorted(by: { $0.date > $1.date }).prefix(3)
+            
+            if !recentNotes.isEmpty {
+                VStack(spacing: 12) {
+                    ForEach(Array(recentNotes), id: \.id) { note in
+                        NoteSummaryCard(note: note)
+                            .onTapGesture {
+                                noteToEdit = note
+                                showingAddNote = true
+                            }
                     }
+                }
             } else {
                 Text("点击 + 添加记录")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
+            }
+        }
+        .sheet(isPresented: $showingHistoryView) {
+            NavigationView {
+                List(healthStore.dailyNotes.sorted(by: { $0.date > $1.date }), id: \.id) { note in
+                    NoteSummaryCard(note: note)
+                        .onTapGesture {
+                            noteToEdit = note
+                            showingAddNote = true
+                            showingHistoryView = false
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .padding(.vertical, 4)
+                }
+                .listStyle(.plain)
+                .navigationTitle("历史记录")
+                .navigationBarTitleDisplayMode(.inline)
             }
         }
     }
@@ -73,6 +111,8 @@ private struct NoteSummaryCard: View {
                         .font(.caption)
                         .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                 }
+                
+                Spacer()
             }
             
             Text(note.content)
@@ -103,8 +143,8 @@ private struct NoteSummaryCard: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(16)
+        .frame(maxWidth: .infinity)
         .background(Theme.cardGradient(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
