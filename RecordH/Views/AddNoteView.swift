@@ -1,5 +1,7 @@
 import SwiftUI
 
+import SwiftUI
+
 struct AddNoteView: View {
     @ObservedObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
@@ -167,7 +169,7 @@ struct AddNoteView: View {
     }
     
     private func addCustomTag() {
-        let tag = newTag.trimmingCharacters(in: .whitespaces)
+                    let tag = newTag.trimmingCharacters(in: .whitespaces)
         if !tag.isEmpty && !selectedTags.contains(tag) {
             selectedTags.insert(tag)
             newTag = ""

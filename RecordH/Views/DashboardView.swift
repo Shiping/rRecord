@@ -51,7 +51,13 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
-                        Button(action: refreshData) {
+                        Button(action: {
+                            isRefreshing = true
+                            healthStore.objectWillChange.send()
+                            healthStore.refreshHealthData {
+                                isRefreshing = false
+                            }
+                        }) {
                             Image(systemName: "arrow.clockwise")
                                 .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                         }
@@ -70,12 +76,9 @@ struct DashboardView: View {
     
     private func refreshData() {
         isRefreshing = true
-        _ = healthStore.userProfile
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            healthStore.refreshHealthData()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                isRefreshing = false
-            }
+        healthStore.objectWillChange.send()
+        healthStore.refreshHealthData {
+            isRefreshing = false
         }
     }
 }

@@ -75,6 +75,12 @@ struct ProfileView: View {
                     Text("浅色").tag("light")
                     Text("深色").tag("dark")
                 }
+                
+                Picker("主题色调", selection: $themeManager.currentAccent) {
+                    Text("蓝色").tag(ThemeManager.ThemeAccent.blue)
+                    Text("淡黄色").tag(ThemeManager.ThemeAccent.lightYellow)
+                    Text("淡橙色").tag(ThemeManager.ThemeAccent.lightOrange)
+                }
             }
 
             Section(header: Text("iCloud 同步"), footer: Text("启用 iCloud 同步后，您的数据将在 iCloud 中备份，并在重新安装应用后自动恢复。")) {
