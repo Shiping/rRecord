@@ -293,6 +293,16 @@ public class HealthStore: ObservableObject {
     }
 
     @objc public dynamic func requestInitialAuthorization(completion: @escaping (Bool) -> Void) {
+        // First check if HealthKit is available on this device
+        guard HKHealthStore.isHealthDataAvailable() else {
+            DispatchQueue.main.async {
+                print("HealthKit is not available on this device")
+                completion(false)
+            }
+            return
+        }
+        
+        // Define all required health data types
         guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount),
               let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
               let flightsClimbedType = HKObjectType.quantityType(forIdentifier: .flightsClimbed),
@@ -302,18 +312,52 @@ public class HealthStore: ObservableObject {
               let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
               let oxygenSaturationType = HKObjectType.quantityType(forIdentifier: .oxygenSaturation),
               let bodyFatType = HKObjectType.quantityType(forIdentifier: .bodyFatPercentage) else {
-            completion(false)
+            DispatchQueue.main.async {
+                print("Failed to create HealthKit data types")
+                completion(false)
+            }
             return
         }
         
-        let typesToRead: Set<HKSampleType> = [stepCountType, sleepType, flightsClimbedType, activeEnergyType, restingEnergyType, heartRateType, distanceType, oxygenSaturationType, bodyFatType]
+        let typesToRead: Set<HKSampleType> = [
+            stepCountType,
+            sleepType,
+            flightsClimbedType,
+            activeEnergyType,
+            restingEnergyType,
+            heartRateType,
+            distanceType,
+            oxygenSaturationType,
+            bodyFatType
+        ]
         
-        healthStore.requestAuthorization(toShare: nil, read: typesToRead) { [weak self] success, error in
+        // Set up a timeout
+        let timeoutInterval: TimeInterval = 30
+        let timeoutTimer = Timer.scheduledTimer(withTimeInterval: timeoutInterval, repeats: false) { _ in
             DispatchQueue.main.async {
+                print("HealthKit authorization request timed out")
+                completion(false)
+            }
+        }
+        
+        // Request authorization with proper error handling
+        healthStore.requestAuthorization(toShare: nil, read: typesToRead) { [weak self] success, error in
+            // Cancel the timeout timer
+            timeoutTimer.invalidate()
+            
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("HealthKit authorization error: \(error.localizedDescription)")
+                    completion(false)
+                    return
+                }
+                
                 if success {
+                    print("HealthKit authorization successful")
                     self?.queueHealthDataFetch()
                     completion(true)
                 } else {
+                    print("HealthKit authorization denied")
                     completion(false)
                 }
             }

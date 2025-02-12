@@ -41,20 +41,29 @@ struct WelcomeView: View {
                 .fill(Color.gray.opacity(0.1)))
             
             Button(action: requestHealthKitPermission) {
-                if isAuthorizationInProgress {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
+                HStack(spacing: 8) {
+                    if isAuthorizationInProgress {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    }
                     Text("继续")
                         .font(.headline)
+                        .fontWeight(.semibold)
                 }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding()
+            .padding(.vertical, 15)
+            .padding(.horizontal)
             .background(isAuthorizationInProgress ? Color.gray : Color.blue)
-            .cornerRadius(10)
+            .cornerRadius(12)
+            .shadow(radius: 2)
+            .animation(.easeInOut(duration: 0.2), value: isAuthorizationInProgress)
             .disabled(isAuthorizationInProgress)
+            .accessibilityLabel("继续")
+            .accessibilityHint("点击授权访问健康数据")
             .padding(.horizontal)
             
             if showError {
@@ -74,13 +83,15 @@ struct WelcomeView: View {
     }
     
     private func requestHealthKitPermission() {
+        guard !isAuthorizationInProgress else { return }
+        
         isAuthorizationInProgress = true
         showError = false
         
-        DispatchQueue.main.async {
-            healthStore.requestInitialAuthorization { success in
-                DispatchQueue.main.async {
-                    isAuthorizationInProgress = false
+        healthStore.requestInitialAuthorization { success in
+            DispatchQueue.main.async {
+                isAuthorizationInProgress = false
+                withAnimation {
                     if success {
                         hasGrantedPermission = true
                     } else {
