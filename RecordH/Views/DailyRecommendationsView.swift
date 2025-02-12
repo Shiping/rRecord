@@ -60,7 +60,7 @@ struct DailyRecommendationsView: View {
     var body: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("AI4Health")
+                Text("AI analysis")
                     .font(.headline)
                     .foregroundColor(Theme.color(.text, scheme: colorScheme))
                 
@@ -95,7 +95,7 @@ struct DailyRecommendationsView: View {
                 .padding(.bottom, 10)
             
             VStack(spacing: 4) {
-                Text("医疗建议免责声明")
+                Text("AI建议免职申明")
                     .font(.caption)
                     .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
                     .frame(maxWidth: .infinity, alignment: .leading)

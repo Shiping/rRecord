@@ -132,14 +132,49 @@ enum ThemeColor {
     }
 }
 
-struct Theme {
-    @ObservedObject private static var themeManager = ThemeManager()
+class Theme: ObservableObject {
+    static let shared = Theme()
+    @ObservedObject private var themeManager = ThemeManager()
     
+    private init() {
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(themeDidChange),
+            name: .init("ThemeDidChange"),
+            object: nil
+        )
+    }
+    
+    @objc private func themeDidChange() {
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Static methods for backward compatibility
     static func color(_ themeColor: ThemeColor, scheme: ColorScheme) -> Color {
-        themeColor.color(for: scheme, accent: themeManager.themeAccent)
+        shared.color(themeColor, scheme: scheme)
     }
     
     static func gradientBackground(for colorScheme: ColorScheme) -> LinearGradient {
+        shared.gradientBackground(for: colorScheme)
+    }
+    
+    static func cardGradient(for colorScheme: ColorScheme) -> LinearGradient {
+        shared.cardGradient(for: colorScheme)
+    }
+    
+    // Instance methods
+    func color(_ themeColor: ThemeColor, scheme: ColorScheme) -> Color {
+        themeColor.color(for: scheme, accent: themeManager.themeAccent)
+    }
+    
+    func gradientBackground(for colorScheme: ColorScheme) -> LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
                 ThemeColor.gradientStart.color(for: colorScheme, accent: themeManager.themeAccent),
@@ -151,7 +186,7 @@ struct Theme {
         )
     }
     
-    static func cardGradient(for colorScheme: ColorScheme) -> LinearGradient {
+    func cardGradient(for colorScheme: ColorScheme) -> LinearGradient {
         let baseColor = ThemeColor.cardBackground.color(for: colorScheme, accent: themeManager.themeAccent)
         let accentColor = ThemeColor.accent.color(for: colorScheme, accent: themeManager.themeAccent).opacity(0.05)
         return LinearGradient(
@@ -168,6 +203,7 @@ struct Theme {
 
 struct ModernCard: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     
     func body(content: Content) -> some View {
         content
@@ -175,18 +211,18 @@ struct ModernCard: ViewModifier {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Theme.cardGradient(for: colorScheme))
+                        .fill(theme.cardGradient(for: colorScheme))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
                                 .stroke(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Theme.color(.accent, scheme: colorScheme).opacity(0.2),
-                                            Theme.color(.accent, scheme: colorScheme).opacity(0.1)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                                    Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
                                     lineWidth: 1.5
                                 )
                         )
@@ -203,6 +239,7 @@ struct ModernCard: ViewModifier {
 
 struct ModernButton: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     
     func body(content: Content) -> some View {
         content

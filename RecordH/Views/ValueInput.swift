@@ -6,6 +6,7 @@ struct ValueInputField: View {
     @Binding var isEditing: Bool
     let unit: String
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     
     var body: some View {
         Button(action: {
@@ -17,13 +18,13 @@ struct ValueInputField: View {
                 HStack(spacing: 4) {
                     if let value = value {
                         Text(String(format: "%.1f", value))
-                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                            .foregroundColor(theme.color(.text, scheme: colorScheme))
                     } else {
                         Text("点击输入")
-                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                            .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
                     }
                     Text(unit)
-                        .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                        .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
                 }
                 .frame(minWidth: 100, alignment: .trailing)
             }
@@ -44,6 +45,7 @@ struct NumberInput: View {
     let unit: String
     @State private var textValue: String = ""
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     
     var body: some View {
         NavigationView {
@@ -58,15 +60,15 @@ struct NumberInput: View {
                             .font(.system(size: 42, weight: .medium, design: .rounded))
                             .minimumScaleFactor(0.5)
                             .lineLimit(1)
-                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                            .foregroundColor(theme.color(.text, scheme: colorScheme))
                         Text(unit)
                             .font(.title2)
-                            .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
+                            .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 80)
                     .padding()
-                    .background(Theme.color(.cardBackground, scheme: colorScheme))
+                    .background(theme.color(.cardBackground, scheme: colorScheme))
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
                     
@@ -146,6 +148,7 @@ struct NumberButton: View {
     let key: String
     let action: () -> Void
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     @State private var isPressed = false
     
     var body: some View {
@@ -162,7 +165,7 @@ struct NumberButton: View {
         }) {
             ZStack {
                 Circle()
-                    .fill(Theme.color(.cardBackground, scheme: colorScheme))
+                    .fill(theme.color(.cardBackground, scheme: colorScheme))
                     .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
                 
                 if key == "⌫" {
@@ -172,7 +175,7 @@ struct NumberButton: View {
                 } else {
                     Text(key)
                         .font(.title)
-                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                        .foregroundColor(theme.color(.text, scheme: colorScheme))
                 }
             }
             .scaleEffect(isPressed ? 0.95 : 1.0)

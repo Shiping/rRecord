@@ -26,6 +26,12 @@ class ThemeManager: ObservableObject {
         set {
             themeAccent = newValue
             UserDefaults.standard.set(newValue.rawValue, forKey: "themeAccent")
+            
+            // Ensure updates are propagated immediately
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+                NotificationCenter.default.post(name: .init("ThemeDidChange"), object: nil)
+            }
         }
     }
     

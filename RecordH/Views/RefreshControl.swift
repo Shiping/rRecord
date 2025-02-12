@@ -3,6 +3,7 @@ import SwiftUI
 struct RefreshControl: View {
     @Binding var isRefreshing: Bool
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var theme = Theme.shared
     let action: () -> Void
     
     @State private var pullTriggered = false
@@ -33,10 +34,10 @@ struct RefreshControl: View {
                 Spacer()
                 if isRefreshing {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.color(.accent, scheme: colorScheme)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: theme.color(.accent, scheme: colorScheme)))
                 } else if pullDistance > 0 {
                     Image(systemName: "arrow.down")
-                        .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                        .foregroundColor(theme.color(.accent, scheme: colorScheme))
                         .rotationEffect(.degrees((min(pullDistance, threshold) / threshold) * 180.0))
                 }
                 Spacer()
