@@ -81,9 +81,15 @@ extension HealthStore {
     func addDailyNote(_ note: DailyNote) throws {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.dailyNotes.append(note)
-            self.dailyNotes.sort(by: { $0.date > $1.date })
+            
+            // Insert at the beginning to maintain reverse chronological order
+            self.dailyNotes.insert(note, at: 0)
+            
+            // Save immediately
             self.saveData()
+            
+            // Force UI update
+            self.objectWillChange.send()
             NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
             print("Note added: \(note.content), Total notes: \(self.dailyNotes.count)")
         }
@@ -92,12 +98,21 @@ extension HealthStore {
     func updateDailyNote(_ updatedNote: DailyNote) throws {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if let index = self.dailyNotes.firstIndex(where: { $0.id == updatedNote.id }) {
-                self.dailyNotes[index] = updatedNote
-                self.dailyNotes.sort(by: { $0.date > $1.date })
-                self.saveData()
-                NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
-            }
+            
+            // Remove old version if exists
+            self.dailyNotes.removeAll { $0.id == updatedNote.id }
+            
+            // Insert at the appropriate position by date
+            let insertIndex = self.dailyNotes.firstIndex { $0.date < updatedNote.date } ?? self.dailyNotes.endIndex
+            self.dailyNotes.insert(updatedNote, at: insertIndex)
+            
+            // Save immediately
+            self.saveData()
+            
+            // Force UI update
+            self.objectWillChange.send()
+            NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
+            print("Note updated: \(updatedNote.content), Total notes: \(self.dailyNotes.count)")
         }
     }
     
@@ -105,9 +120,12 @@ extension HealthStore {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.dailyNotes.removeAll { $0.id == id }
-            self.dailyNotes.sort(by: { $0.date > $1.date })
             self.saveData()
+            
+            // Force UI update
+            self.objectWillChange.send()
             NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
+            print("Note deleted, Total notes: \(self.dailyNotes.count)")
         }
     }
     

@@ -55,7 +55,6 @@ struct AddNoteView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color(.systemBackground))
-                            .animation(.easeInOut, value: textEditorHeight)
                         
                         Rectangle()
                             .fill(Color(.systemGray4))
@@ -65,23 +64,10 @@ struct AddNoteView: View {
                                     .foregroundColor(.white)
                                     .font(.system(size: 20, weight: .bold))
                             )
-                            .onTapGesture {}
                             .gesture(
                                 DragGesture()
                                     .onChanged { value in
-                                        isDragging = true
-                                        let newHeight = textEditorHeight + value.translation.height
-                                        textEditorHeight = max(100, newHeight)
-                                    }
-                                    .onEnded { _ in
-                                        isDragging = false
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            if !isDragging {
-                                                withAnimation {
-                                                    textEditorHeight = 100
-                                                }
-                                            }
-                                        }
+                                        textEditorHeight = max(100, textEditorHeight + value.translation.height)
                                     }
                             )
                     }
@@ -195,9 +181,10 @@ struct AddNoteView: View {
             } else {
                 try healthStore.addDailyNote(note)
             }
-            healthStore.saveData() // Ensure data is saved to disk
-            healthStore.objectWillChange.send()
-            dismiss()
+            // Allow time for the async operation to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                dismiss()
+            }
         } catch {
             print("Failed to save note: \(error)")
             alertMessage = "保存笔记失败: \(error.localizedDescription)"

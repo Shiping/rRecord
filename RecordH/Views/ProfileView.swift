@@ -117,9 +117,10 @@ struct ProfileView: View {
                 
                 Button(action: {
                     isSyncing = true
-                    healthStore.refreshHealthData()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        isSyncing = false
+                    healthStore.refreshHealthData {
+                        DispatchQueue.main.async {
+                            isSyncing = false
+                        }
                     }
                 }) {
                     HStack {

@@ -23,11 +23,11 @@ struct RecordHApp: App {
                         .environmentObject(healthStore)
                         .environmentObject(themeManager)
                 }
-            }
+            } 
             .task {
                 // Initialize HealthStore
                 try? await Task.sleep(nanoseconds: 1_000_000_000) // Show launch screen for 1 second
-                healthStore.loadData()
+                healthStore.refreshHealthData() // Use refreshHealthData instead of loadData to fetch latest data
                 
                 withAnimation {
                     showLaunchScreen = false
