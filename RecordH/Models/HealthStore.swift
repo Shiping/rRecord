@@ -10,10 +10,14 @@ public class HealthStore: NSObject, ObservableObject {
     @Published var healthRecords: [HealthRecord] = []
         @Published var dailyNotes: [DailyNote] = [] {
             didSet {
-                saveData()
-                self.objectWillChange.send()
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
+                do {
+                    let notesData = try JSONEncoder().encode(dailyNotes)
+                    try notesData.write(to: notesURL)
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: .init("NotesDidUpdate"), object: nil)
+                    }
+                } catch {
+                    print("Error saving notes: \(error)")
                 }
             }
         }
@@ -50,8 +54,30 @@ var lastUpdate: Date?
         do {
             try createDirectoryIfNeeded()
             loadData() // Load saved data from disk
+            setupHealthKit()
         } catch {
             print("Error initializing storage: \(error)")
+        }
+    }
+    
+    private func setupHealthKit() {
+        // Define the types we want to read from HealthKit
+        let healthTypes: Set<HKObjectType> = [
+            HKObjectType.quantityType(forIdentifier: .stepCount)!,
+            HKObjectType.quantityType(forIdentifier: .heartRate)!,
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .basalEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+            HKObjectType.quantityType(forIdentifier: .oxygenSaturation)!,
+            HKObjectType.quantityType(forIdentifier: .flightsClimbed)!,
+            HKCategoryType(.sleepAnalysis)
+        ]
+        
+        // Request authorization
+        healthStore.requestAuthorization(toShare: nil, read: healthTypes) { success, error in
+            if !success {
+                print("HealthKit authorization failed: \(error?.localizedDescription ?? "Unknown error")")
+            }
         }
     }
     
@@ -92,6 +118,7 @@ var lastUpdate: Date?
 
     func saveData() {
         do {
+            // Save profile and records only
             if let profile = userProfile {
                 let profileData = try JSONEncoder().encode(profile)
                 try profileData.write(to: profileURL)
@@ -99,11 +126,18 @@ var lastUpdate: Date?
             
             let recordsData = try JSONEncoder().encode(healthRecords)
             try recordsData.write(to: recordsURL)
-            
+        } catch {
+            print("Error saving data: \(error.localizedDescription)")
+        }
+    }
+
+    private func saveExceptNotes() {
+        // Used by iCloud sync to avoid triggering dailyNotes didSet observer
+        do {
             let notesData = try JSONEncoder().encode(dailyNotes)
             try notesData.write(to: notesURL)
         } catch {
-            print("Error saving data: \(error)")
+            print("Error saving notes: \(error.localizedDescription)")
         }
     }
 
@@ -182,6 +216,7 @@ var lastUpdate: Date?
         do {
             // Save current data to local files first
             saveData()
+            saveExceptNotes()
             
             // Get file URLs to sync
             let filesToSync = [profileURL, recordsURL, notesURL]

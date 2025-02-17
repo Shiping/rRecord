@@ -149,8 +149,7 @@ class Theme: ObservableObject {
                     self?.objectWillChange.send()
                     
                     // Force UI update across all views
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
+                        DispatchQueue.main.async {
                         #if os(iOS)
                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                            let window = windowScene.windows.first {

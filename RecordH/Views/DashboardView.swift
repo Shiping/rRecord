@@ -110,16 +110,10 @@ struct DashboardView: View {
         // Prevent refresh if already refreshing
         guard !isRefreshing else { return }
         
-        // If this isn't the first app launch and we've already done one manual refresh, skip
-        if hasInitiallyLoaded && !isFirstRefresh {
-            return
-        }
-        
         isRefreshing = true
         healthStore.refreshHealthData {
             DispatchQueue.main.async {
                 self.isRefreshing = false
-                self.isFirstRefresh = false // Mark first manual refresh as complete
                 print("Data refreshed, notes count: \(self.healthStore.dailyNotes.count)")
             }
         }

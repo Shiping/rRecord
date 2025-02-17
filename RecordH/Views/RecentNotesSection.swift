@@ -8,23 +8,20 @@ struct RecentNotesSection: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            let recentNotes = Array(healthStore.dailyNotes.sorted(by: { $0.date > $1.date }).prefix(3))
-            if !recentNotes.isEmpty {
-                ForEach(recentNotes, id: \.id) { note in
-                    NavigationLink(destination: NoteDetailView(note: note).environmentObject(healthStore)) {
-                        NoteSummaryCard(note: note)
-                    }
-                }
-            } else {
+            if healthStore.dailyNotes.isEmpty {
                 Text("点击 + 添加笔记")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
+            }
+            ForEach(Array(healthStore.dailyNotes.prefix(3)), id: \.id) { note in
+                NavigationLink(destination: NoteDetailView(note: note).environmentObject(healthStore)) {
+                    NoteSummaryCard(note: note)
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("NotesDidUpdate"))) { _ in
             // Force view to refresh by toggling state
             forceRefresh.toggle()
-            healthStore.loadData()
         }
     }
 }
