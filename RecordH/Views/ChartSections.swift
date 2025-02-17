@@ -1,9 +1,12 @@
 import SwiftUI
 import Charts
 
+import SwiftUI
+import Charts
+
 struct WeightChartSection: View {
     let records: [HealthRecord]
-    let healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -77,7 +80,7 @@ struct WeightChartSection: View {
 
 struct BMIChartSection: View {
     let records: [HealthRecord]
-    let healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     
     var bmiRecords: [(date: Date, bmi: Double)] {
         records.compactMap { record in
@@ -236,7 +239,7 @@ struct BloodPressureChartSection: View {
 struct ChartSection: View {
     let records: [HealthRecord]
     let type: HealthRecord.RecordType
-    let healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     
     var body: some View {
         VStack(alignment: .leading) {

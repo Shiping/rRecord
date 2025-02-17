@@ -8,23 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var healthStore = HealthStore()
-    @StateObject private var themeManager = ThemeManager()
+    @EnvironmentObject private var healthStore: HealthStore
+    @EnvironmentObject private var themeManager: ThemeManager
     @AppStorage("hasGrantedHealthKitPermission") private var hasGrantedPermission = false
     
     var body: some View {
         Group {
             if hasGrantedPermission {
-                DashboardView(healthStore: healthStore)
-                    .preferredColorScheme(themeManager.colorScheme)
+                DashboardView()
+                    .environmentObject(healthStore)
                     .environmentObject(themeManager)
-                    // Fix NavigationView style for iPad
+                    .preferredColorScheme(themeManager.colorScheme)
                     .navigationViewStyle(StackNavigationViewStyle())
             } else {
-                WelcomeView(healthStore: healthStore, hasGrantedPermission: $hasGrantedPermission)
-                    .preferredColorScheme(themeManager.colorScheme)
+                WelcomeView(hasGrantedPermission: $hasGrantedPermission)
+                    .environmentObject(healthStore)
                     .environmentObject(themeManager)
-                    // Fix NavigationView style for iPad
+                    .preferredColorScheme(themeManager.colorScheme)
                     .navigationViewStyle(StackNavigationViewStyle())
             }
         }
@@ -33,4 +33,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(HealthStore())
+        .environmentObject(ThemeManager())
 }

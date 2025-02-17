@@ -5,37 +5,12 @@ public struct UserProfile: Codable {
     public var birthDate: Date
     public var gender: Gender
     public var name: String
-    public var aiSettings: [AIConfiguration]
-    public var selectedAIConfigurationId: UUID? // 添加选中的 AI 配置 ID
     
-    public init(height: Double, birthDate: Date, gender: Gender, name: String, aiSettings: [AIConfiguration] = [AIConfiguration(name: "默认配置", deepseekApiKey: "", deepseekBaseURL: "https://api.deepseek.com/v1", deepseekModel: "deepseek-chat", enabled: false)]) {
+    public init(height: Double, birthDate: Date, gender: Gender, name: String) {
         self.height = height
         self.birthDate = birthDate
         self.gender = gender
         self.name = name
-        self.aiSettings = aiSettings
-        // 设置默认选中第一个配置的 ID
-        self.selectedAIConfigurationId = aiSettings.first?.id
-    }
-    
-    public struct AIConfiguration: Codable, Identifiable {
-        public var id: UUID = UUID()
-        public let name: String
-        public var deepseekApiKey: String
-        public var deepseekBaseURL: String
-        public var deepseekModel: String
-        public var enabled: Bool
-        
-        public init(name: String, deepseekApiKey: String = "",
-             deepseekBaseURL: String = "https://api.deepseek.com/v1",
-             deepseekModel: String = "deepseek-chat",
-             enabled: Bool = false) {
-            self.name = name
-            self.deepseekApiKey = deepseekApiKey
-            self.deepseekBaseURL = deepseekBaseURL
-            self.deepseekModel = deepseekModel
-            self.enabled = enabled
-        }
     }
     
     public enum Gender: String, Codable {
@@ -180,7 +155,7 @@ public struct HealthRecord: Identifiable, Codable {
     }
 }
 
-public struct DailyNote: Identifiable, Codable {
+public struct DailyNote: Identifiable, Codable, Equatable {
     public let id: UUID
     public let date: Date
     public var content: String
@@ -189,12 +164,10 @@ public struct DailyNote: Identifiable, Codable {
     
     public enum Category: String, Codable {
         case general
-        case aiAdvice
         
         public var displayName: String {
             switch self {
             case .general: return "一般记录"
-            case .aiAdvice: return "AI建议"
             }
         }
     }
@@ -205,5 +178,13 @@ public struct DailyNote: Identifiable, Codable {
         self.content = content
         self.tags = tags
         self.category = category
+    }
+    
+    public static func == (lhs: DailyNote, rhs: DailyNote) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.date == rhs.date &&
+        lhs.content == rhs.content &&
+        lhs.tags == rhs.tags &&
+        lhs.category == rhs.category
     }
 }

@@ -3,12 +3,12 @@ import HealthKit
 
 struct AddRecordSheet: View {
     let type: HealthRecord.RecordType
-    @ObservedObject var healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     @Binding var isPresented: Bool
     var editingRecord: HealthRecord?
     
-    @State private var value: Double?
-    @State private var secondaryValue: Double?
+    @State private var value: Double? = 0.0
+    @State private var secondaryValue: Double? = 0.0
     @State private var isEditingValue = false
     @State private var isEditingSecondaryValue = false
     @State private var note: String = ""
@@ -23,9 +23,8 @@ struct AddRecordSheet: View {
         return weight / ((height / 100) * (height / 100))
     }
     
-    init(type: HealthRecord.RecordType, healthStore: HealthStore, isPresented: Binding<Bool>, editingRecord: HealthRecord? = nil) {
+    init(type: HealthRecord.RecordType, isPresented: Binding<Bool>, editingRecord: HealthRecord? = nil) {
         self.type = type
-        self.healthStore = healthStore
         self._isPresented = isPresented
         self.editingRecord = editingRecord
         
@@ -120,7 +119,8 @@ struct AddRecordSheet: View {
                                     .padding(.horizontal)
                                 } else if healthStore.userProfile?.height == nil {
                                     NavigationLink {
-                                        ProfileView(healthStore: healthStore)
+                                        ProfileView()
+                                            .environmentObject(healthStore)
                                     } label: {
                                         HStack {
                                             Text("需要设置身高才能计算BMI")
@@ -247,7 +247,7 @@ struct AddRecordSheet: View {
 #Preview {
     AddRecordSheet(
         type: .bloodPressure,
-        healthStore: HealthStore(),
         isPresented: .constant(true)
     )
+    .environmentObject(HealthStore())
 }

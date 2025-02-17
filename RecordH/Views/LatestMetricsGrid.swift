@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - MetricsGrid and Cards
 struct LatestMetricsGrid: View {
-    @ObservedObject var healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
     
     @State private var showingAddRecord = false
@@ -11,11 +11,13 @@ struct LatestMetricsGrid: View {
     var body: some View {
         VStack(spacing: 15) {
             ForEach(HealthRecord.RecordType.allCases, id: \.self) { type in
-                NavigationLink(destination: HealthMetricDetailView(healthStore: healthStore, type: type)) {
-                    MetricCardWrapper(type: type, healthStore: healthStore)
-                        .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                }
-                .overlay(
+                ZStack(alignment: .topTrailing) {
+                    NavigationLink(destination: HealthMetricDetailView(type: type).environmentObject(healthStore)) {
+                        MetricCardWrapper(type: type)
+                            .environmentObject(healthStore)
+                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+                    }
+                    
                     Button(action: {
                         selectedType = type
                         showingAddRecord = true
@@ -25,16 +27,17 @@ struct LatestMetricsGrid: View {
                             .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                             .background(Circle().fill(Theme.color(.cardBackground, scheme: colorScheme)))
                     }
-                    .padding(8),
-                    alignment: .topTrailing
-                )
+                    .padding(8)
+                    .zIndex(1) // Ensure button is above the NavigationLink
+                }
                 .frame(maxWidth: .infinity)
             }
         }
         .padding([.horizontal, .top])
         .sheet(isPresented: $showingAddRecord) {
             if let type = selectedType {
-                AddRecordSheet(type: type, healthStore: healthStore, isPresented: $showingAddRecord)
+                AddRecordSheet(type: type, isPresented: $showingAddRecord)
+                    .environmentObject(healthStore)
             }
         }
     }
@@ -42,11 +45,12 @@ struct LatestMetricsGrid: View {
 
 private struct MetricCardWrapper: View {
     let type: HealthRecord.RecordType
-    @ObservedObject var healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     
     var body: some View {
         let record = healthStore.getLatestRecord(for: type)
-        MetricCard(type: type, record: record, healthStore: healthStore)
+        MetricCard(type: type, record: record)
+            .environmentObject(healthStore)
     }
 }
 
@@ -56,11 +60,11 @@ private struct StatusIcon {
 }
 
 struct MetricCard: View {
+    @EnvironmentObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     let type: HealthRecord.RecordType
     let record: HealthRecord?
-    let healthStore: HealthStore
     
     private func getStatusIcon(type: HealthRecord.RecordType, value: Double) -> StatusIcon {
         let isNormal: Bool
@@ -69,21 +73,21 @@ struct MetricCard: View {
         case .steps:
             isNormal = value >= (type.normalRange.min ?? 0)
         case .sleep:
-            isNormal = value >= (type.normalRange.min ?? 0) && 
-                      value <= (type.normalRange.max ?? Double.infinity)
+            isNormal = value >= (type.normalRange.min ?? 0) &&
+            value <= (type.normalRange.max ?? Double.infinity)
         case .activeEnergy:
             isNormal = value >= (type.normalRange.min ?? 0)
         case .heartRate:
-            isNormal = value >= (type.normalRange.min ?? 0) && 
-                      value <= (type.normalRange.max ?? Double.infinity)
+            isNormal = value >= (type.normalRange.min ?? 0) &&
+            value <= (type.normalRange.max ?? Double.infinity)
         case .distance:
             isNormal = value >= (type.normalRange.min ?? 0)
         case .bloodOxygen:
-            isNormal = value >= (type.normalRange.min ?? 0) && 
-                      value <= (type.normalRange.max ?? Double.infinity)
+            isNormal = value >= (type.normalRange.min ?? 0) &&
+            value <= (type.normalRange.max ?? Double.infinity)
         case .bodyFat:
-            isNormal = value >= (type.normalRange.min ?? 0) && 
-                      value <= (type.normalRange.max ?? Double.infinity)
+            isNormal = value >= (type.normalRange.min ?? 0) &&
+            value <= (type.normalRange.max ?? Double.infinity)
         default:
             return StatusIcon(icon: "", color: .clear)
         }
@@ -173,9 +177,9 @@ struct MetricCard: View {
                     .textSelection(.enabled)
                     
                     // Status
-                    if type == .steps || type == .sleep || type == .activeEnergy || 
-                       type == .heartRate || type == .distance || type == .bloodOxygen || 
-                       type == .bodyFat {
+                    if type == .steps || type == .sleep || type == .activeEnergy ||
+                        type == .heartRate || type == .distance || type == .bloodOxygen ||
+                        type == .bodyFat {
                         let statusIcon = getStatusIcon(type: type, value: record.value)
                         HStack(spacing: 6) {
                             Image(systemName: statusIcon.icon)

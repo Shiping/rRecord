@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 enum ThemeColor {
     case background
@@ -135,69 +136,103 @@ enum ThemeColor {
 class Theme: ObservableObject {
     static let shared = Theme()
     @ObservedObject private var themeManager = ThemeManager()
+    @Published private var forceUpdate = false
+    private var cancellables = Set<AnyCancellable>()
     
     private init() {
-        // Listen for theme changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(themeDidChange),
-            name: .init("ThemeDidChange"),
-            object: nil
-        )
+        // Listen for theme changes with Combine
+        NotificationCenter.default.publisher(for: .init("ThemeDidChange"))
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self?.forceUpdate.toggle()
+                    self?.objectWillChange.send()
+                    
+                    // Force UI update across all views
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        #if os(iOS)
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first {
+                            // Reset window style to force redraw
+                            let currentStyle = window.overrideUserInterfaceStyle
+                            window.overrideUserInterfaceStyle = currentStyle == .light ? .dark : .light
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                window.overrideUserInterfaceStyle = currentStyle
+                            }
+                        }
+                        #endif
+                    }
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Also observe theme accent changes
+        themeManager.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self?.forceUpdate.toggle()
+                    self?.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
     }
     
-    @objc private func themeDidChange() {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
+    // Static methods for backward compatibility with animation
+    static func color(_ themeColor: ThemeColor, scheme: ColorScheme) -> Color {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            shared.color(themeColor, scheme: scheme)
         }
     }
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-    
-    // Static methods for backward compatibility
-    static func color(_ themeColor: ThemeColor, scheme: ColorScheme) -> Color {
-        shared.color(themeColor, scheme: scheme)
-    }
-    
     static func gradientBackground(for colorScheme: ColorScheme) -> LinearGradient {
-        shared.gradientBackground(for: colorScheme)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            shared.gradientBackground(for: colorScheme)
+        }
     }
     
     static func cardGradient(for colorScheme: ColorScheme) -> LinearGradient {
-        shared.cardGradient(for: colorScheme)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            shared.cardGradient(for: colorScheme)
+        }
     }
     
-    // Instance methods
+    // Instance methods with animation
     func color(_ themeColor: ThemeColor, scheme: ColorScheme) -> Color {
-        themeColor.color(for: scheme, accent: themeManager.themeAccent)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            themeColor.color(for: scheme, accent: themeManager.themeAccent)
+        }
     }
     
     func gradientBackground(for colorScheme: ColorScheme) -> LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                ThemeColor.gradientStart.color(for: colorScheme, accent: themeManager.themeAccent),
-                ThemeColor.gradientMid.color(for: colorScheme, accent: themeManager.themeAccent),
-                ThemeColor.gradientEnd.color(for: colorScheme, accent: themeManager.themeAccent)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        withAnimation(.easeInOut(duration: 0.3)) {
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    ThemeColor.gradientStart.color(for: colorScheme, accent: themeManager.themeAccent),
+                    ThemeColor.gradientMid.color(for: colorScheme, accent: themeManager.themeAccent),
+                    ThemeColor.gradientEnd.color(for: colorScheme, accent: themeManager.themeAccent)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
     
     func cardGradient(for colorScheme: ColorScheme) -> LinearGradient {
-        let baseColor = ThemeColor.cardBackground.color(for: colorScheme, accent: themeManager.themeAccent)
-        let accentColor = ThemeColor.accent.color(for: colorScheme, accent: themeManager.themeAccent).opacity(0.05)
-        return LinearGradient(
-            gradient: Gradient(colors: [
-                baseColor,
-                baseColor.opacity(0.95),
-                accentColor
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        withAnimation(.easeInOut(duration: 0.3)) {
+            let baseColor = ThemeColor.cardBackground.color(for: colorScheme, accent: themeManager.themeAccent)
+            let accentColor = ThemeColor.accent.color(for: colorScheme, accent: themeManager.themeAccent).opacity(0.05)
+            return LinearGradient(
+                gradient: Gradient(colors: [
+                    baseColor,
+                    baseColor.opacity(0.95),
+                    accentColor
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
 }
 
@@ -215,14 +250,14 @@ struct ModernCard: ViewModifier {
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
                                 .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Theme.color(.accent, scheme: colorScheme).opacity(0.2),
-                                    Theme.color(.accent, scheme: colorScheme).opacity(0.1)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Theme.color(.accent, scheme: colorScheme).opacity(0.2),
+                                            Theme.color(.accent, scheme: colorScheme).opacity(0.1)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
                                     lineWidth: 1.5
                                 )
                         )
@@ -234,6 +269,7 @@ struct ModernCard: ViewModifier {
                 x: 0,
                 y: colorScheme == .dark ? 6 : 4
             )
+            .animation(.easeInOut(duration: 0.3), value: colorScheme)
     }
 }
 
@@ -248,6 +284,7 @@ struct ModernButton: ViewModifier {
             .foregroundColor(.white)
             .cornerRadius(10)
             .shadow(radius: colorScheme == .dark ? 3 : 1)
+            .animation(.easeInOut(duration: 0.3), value: colorScheme)
     }
 }
 

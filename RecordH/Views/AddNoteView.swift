@@ -1,9 +1,7 @@
 import SwiftUI
 
-import SwiftUI
-
 struct AddNoteView: View {
-    @ObservedObject var healthStore: HealthStore
+    @EnvironmentObject var healthStore: HealthStore
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
     var noteToEdit: DailyNote?
@@ -14,11 +12,12 @@ struct AddNoteView: View {
     @State private var selectedDate = Date()
     @State private var textEditorHeight: CGFloat = 100 // 默认高度
     @State private var isDragging = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
     
     private let commonTags = ["运动", "饮食", "睡眠", "心情", "灵感", "工作"]
     
-    init(healthStore: HealthStore, noteToEdit: DailyNote? = nil) {
-        self.healthStore = healthStore
+    init(noteToEdit: DailyNote? = nil) {
         self.noteToEdit = noteToEdit
         
         if let note = noteToEdit {
@@ -37,7 +36,7 @@ struct AddNoteView: View {
     
     var body: some View {
         NavigationView {
-            List {
+            Form {
                 Section {
                     DatePicker(
                         "选择日期时间",
@@ -105,9 +104,7 @@ struct AddNoteView: View {
                                 TagButton(
                                     tag: tag,
                                     isSelected: selectedTags.contains(tag),
-                                    action: {
-                                        toggleTag(tag)
-                                    }
+                                    action: { toggleTag(tag) }
                                 )
                             }
                         }
@@ -136,9 +133,7 @@ struct AddNoteView: View {
                                     TagButton(
                                         tag: tag,
                                         isSelected: true,
-                                        action: {
-                                            toggleTag(tag)
-                                        }
+                                        action: { toggleTag(tag) }
                                     )
                                 }
                             }
@@ -148,15 +143,25 @@ struct AddNoteView: View {
                 }
             }
             .navigationTitle("添加笔记")
-            .navigationBarItems(
-                leading: Button("取消") {
-                    dismiss()
-                },
-                trailing: Button("保存") {
-                    saveNote()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
                 }
-                .disabled(noteContent.isEmpty)
-            )
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("保存") {
+                        saveNote()
+                    }
+                    .disabled(noteContent.isEmpty)
+                }
+            }
+            .alert("错误", isPresented: $showAlert) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(alertMessage)
+            }
         }
     }
     
@@ -169,7 +174,7 @@ struct AddNoteView: View {
     }
     
     private func addCustomTag() {
-                    let tag = newTag.trimmingCharacters(in: .whitespaces)
+        let tag = newTag.trimmingCharacters(in: .whitespaces)
         if !tag.isEmpty && !selectedTags.contains(tag) {
             selectedTags.insert(tag)
             newTag = ""
@@ -180,16 +185,24 @@ struct AddNoteView: View {
         let note = DailyNote(
             id: noteToEdit?.id ?? UUID(),
             date: selectedDate,
-            content: noteContent,
+            content: noteContent.trimmingCharacters(in: .whitespacesAndNewlines),
             tags: Array(selectedTags)
         )
         
-        if noteToEdit != nil {
-            healthStore.updateDailyNote(note)
-        } else {
-            healthStore.addDailyNote(note)
+        do {
+            if noteToEdit != nil {
+                try healthStore.updateDailyNote(note)
+            } else {
+                try healthStore.addDailyNote(note)
+            }
+            healthStore.saveData() // Ensure data is saved to disk
+            healthStore.objectWillChange.send()
+            dismiss()
+        } catch {
+            print("Failed to save note: \(error)")
+            alertMessage = "保存笔记失败: \(error.localizedDescription)"
+            showAlert = true
         }
-        dismiss()
     }
 }
 
@@ -212,5 +225,6 @@ struct TagButton: View {
 }
 
 #Preview {
-    AddNoteView(healthStore: HealthStore())
+    AddNoteView()
+        .environmentObject(HealthStore())
 }

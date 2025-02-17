@@ -1,9 +1,0 @@
-"/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthAdvisorProvider.swift":
-  dependencies: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.d"
-  abi-baseline-json: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.abi.json"
-  swiftmodule: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftmodule"
-  diagnostics: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.dia"
-  const-values: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.swiftconstvalues"
-  swiftdoc: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftdoc"
-  objc-header: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-Swift.h"
-  swiftsourceinfo: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftsourceinfo"

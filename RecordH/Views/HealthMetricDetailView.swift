@@ -18,135 +18,106 @@ enum TimeFilterOption: String, CaseIterable {
 }
 
 struct HealthMetricDetailView: View {
-    @ObservedObject var healthStore: HealthStore
-    @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var healthStore: HealthStore
     let type: HealthRecord.RecordType
+    @Environment(\.colorScheme) var colorScheme
     @State private var showingAddRecord = false
-    @State private var recordToEdit: HealthRecord? = nil
     @State private var selectedTimeFilter: TimeFilterOption = .year
     
     var filteredRecords: [HealthRecord] {
-        let allRecords = healthStore.getRecords(for: type)
-        
-        // Filter by date if needed
-        let dateFilteredRecords: [HealthRecord]
+        let records = healthStore.getRecords(for: type)
         if let days = selectedTimeFilter.days {
-            let cutoffDate = Calendar.current.date(
-                byAdding: .day,
-                value: -days,
-                to: Date()
-            ) ?? Date()
-            
-            dateFilteredRecords = allRecords.filter { record in 
-                record.date >= cutoffDate
-            }
-        } else {
-            dateFilteredRecords = allRecords
+            let calendar = Calendar.current
+            let pastDate = calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date.distantPast
+            return records.filter { $0.date >= pastDate }
         }
-        
-        // Return reversed for newest first
-        return dateFilteredRecords.reversed()
-    }
-    
-    private var timeFilterPicker: some View {
-        Picker("时间筛选", selection: $selectedTimeFilter) {
-            ForEach(TimeFilterOption.allCases, id: \.self) { option in
-                Text(option.rawValue).tag(option)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding()
-    }
-    
-    private var recordList: some View {
-        ForEach(Array(filteredRecords.enumerated()), id: \.element.id) { index, record in
-            RecordRow(record: record, type: type, healthStore: healthStore)
-                .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        healthStore.deleteHealthRecord(record.id)
-                    } label: {
-                        Label("删除", systemImage: "trash")
-                    }
-                    
-                    Button {
-                        editRecord(record)
-                    } label: {
-                        Label("编辑", systemImage: "pencil")
-                    }
-                    .tint(.orange)
-                }
-        }
-    }
-    
-    private var toolbarLeadingItem: some View {
-        HStack {
-            Image(systemName: "heart.text.square.fill")
-                .foregroundColor(.red)
-            Text("来自HealthKit")
-                .font(.caption)
-                .foregroundColor(Theme.color(.secondaryText, scheme: colorScheme))
-        }
-    }
-    
-    private var toolbarTrailingItem: some View {
-        Button(action: { showingAddRecord = true }) {
-            Image(systemName: "plus.circle.fill")
-                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-        }
-    }
-    
-    private var addRecordSheet: some View {
-        AddRecordSheet(
-            type: type,
-            healthStore: healthStore,
-            isPresented: $showingAddRecord,
-            editingRecord: recordToEdit
-        )
+        return records
     }
     
     var body: some View {
-        VStack {
-            timeFilterPicker
-            
-            List {
+        List {
+            Section(header: Text("数据图表")) {
                 chartSection
-                recordList
             }
-            .background(Theme.gradientBackground(for: colorScheme))
-            .navigationTitle(type.displayName)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    toolbarLeadingItem
+            
+            Section(header: HStack {
+                Text("历史记录")
+                Spacer()
+                Menu {
+                    ForEach(TimeFilterOption.allCases, id: \.self) { option in
+                        Button(action: {
+                            selectedTimeFilter = option
+                        }) {
+                            HStack {
+                                Text(option.rawValue)
+                                if selectedTimeFilter == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(selectedTimeFilter.rawValue)
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    toolbarTrailingItem
+            }) {
+                ForEach(filteredRecords, id: \.id) { record in
+                    HStack {
+                        Text(record.date.formatted(.dateTime.month().day().hour().minute()))
+                        Spacer()
+                        if type.needsSecondaryValue {
+                            Text("\(String(format: "%.1f", record.value))/\(String(format: "%.1f", record.secondaryValue ?? 0)) \(record.unit)")
+                        } else {
+                            Text("\(String(format: "%.1f", record.value)) \(record.unit)")
+                        }
+                    }
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            healthStore.deleteHealthRecord(record.id)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
                 }
-            }
-            .sheet(isPresented: $showingAddRecord) {
-                addRecordSheet
             }
         }
+        .navigationTitle(type.displayName)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    showingAddRecord = true
+                }) {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddRecord) {
+            AddRecordSheet(
+                type: type,
+                isPresented: $showingAddRecord
+            )
+            .environmentObject(healthStore)
+        }
     }
-    
-    private func editRecord(_ record: HealthRecord) {
-        recordToEdit = record
-        showingAddRecord = true
-    }
-    
+
     private var weightCharts: some View {
         VStack(spacing: 20) {
-            WeightChartSection(records: filteredRecords, healthStore: healthStore)
+            WeightChartSection(records: filteredRecords)
+                .environmentObject(healthStore)
                 .frame(height: 200)
-            
-            BMIChartSection(records: filteredRecords, healthStore: healthStore)
+
+            BMIChartSection(records: filteredRecords)
+                .environmentObject(healthStore)
                 .frame(height: 200)
         }
         .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
         .listRowInsets(EdgeInsets())
         .padding()
     }
-    
+
     private var bloodPressureCharts: some View {
         VStack(spacing: 20) {
             BloodPressureChartSection(
@@ -157,7 +128,7 @@ struct HealthMetricDetailView: View {
                 color: Theme.color(.accent, scheme: colorScheme)
             )
             .frame(height: 200)
-            
+
             BloodPressureChartSection(
                 records: filteredRecords,
                 title: "舒张压",
@@ -171,15 +142,16 @@ struct HealthMetricDetailView: View {
         .listRowInsets(EdgeInsets())
         .padding()
     }
-    
+
     private var genericChart: some View {
-        ChartSection(records: filteredRecords, type: type, healthStore: healthStore)
+        ChartSection(records: filteredRecords, type: type)
+            .environmentObject(healthStore)
             .frame(height: 200)
             .listRowBackground(Theme.color(.cardBackground, scheme: colorScheme))
             .listRowInsets(EdgeInsets())
             .padding()
     }
-    
+
     @ViewBuilder
     private var chartSection: some View {
         if type == .weight {
@@ -193,8 +165,6 @@ struct HealthMetricDetailView: View {
 }
 
 #Preview {
-    HealthMetricDetailView(
-        healthStore: HealthStore(),
-        type: .weight
-    )
+    HealthMetricDetailView(type: .weight)
+        .environmentObject(HealthStore())
 }
