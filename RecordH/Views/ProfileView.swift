@@ -139,6 +139,16 @@ struct ProfileView: View {
                 .disabled(!HKHealthStore.isHealthDataAvailable())
             }
             
+            Section(header: Text("医学参考")) {
+                NavigationLink(destination: MedicalReferencesView()) {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .foregroundColor(Theme.color(.accent, scheme: themeManager.colorScheme ?? .light))
+                        Text("查看健康指标医学参考")
+                    }
+                }
+            }
+
             Section {
                 Button("保存") {
                     saveProfile()

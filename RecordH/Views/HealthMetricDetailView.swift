@@ -40,6 +40,20 @@ struct HealthMetricDetailView: View {
                 chartSection
             }
             
+            if let reference = MedicalReferences.references[type] {
+                Section(header: Text("参考标准")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("正常范围：\(reference.normalRange)")
+                        Text("来源：\(reference.source)")
+                        Text("发布机构：\(reference.organization)")
+                        Text("发布年份：\(reference.year)")
+                        Link("查看原文", destination: URL(string: reference.url)!)
+                            .foregroundColor(Theme.color(.accent, scheme: colorScheme))
+                    }
+                    .font(.subheadline)
+                }
+            }
+            
             Section(header: HStack {
                 Text("历史记录")
                 Spacer()

@@ -185,17 +185,17 @@ struct MetricCard: View {
                             Image(systemName: statusIcon.icon)
                                 .foregroundColor(statusIcon.color)
                                 .imageScale(.small)
-                            Text(statusIcon.icon == "checkmark.circle.fill" ? "正常" : "注意")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(statusIcon.color)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(statusIcon.color.opacity(0.15))
-                                )
-                                .textSelection(.enabled)
+            Text(statusIcon.icon == "checkmark.circle.fill" ? "正常" : "注意")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(statusIcon.color)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(statusIcon.color.opacity(0.15))
+                )
+                .textSelection(.enabled)
                         }
                     }
                     
