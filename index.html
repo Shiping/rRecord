@@ -309,19 +309,110 @@
                 <button type="submit" class="btn">Send Message / 发送问题</button>
             </form>
         </section>
+
+        <!-- 新增问题展示区域 -->
+        <section class="questions-section">
+            <div class="bilingual">
+                <h2 class="en">Recent Questions</h2>
+                <h2 class="cn">最近问题</h2>
+            </div>
+            <div id="questionsList" class="questions-container">
+                <!-- 问题将在这里动态显示 -->
+            </div>
+        </section>
     </div>
 
     <footer class="footer">
         <p>© 2025 hRecord. All rights reserved.</p>
-        <p>Contact: <a href="mailto:Shipinglau@gmail.com">Shipinglau@gmail.com</a></p>
+        <p>Contact: <a href="mailto:shipinglau@gmail.com">shipinglau@gmail.com</a></p>
     </footer>
 
     <script>
+        // 存储问题的数组
+        let questions = [];
+
+        // 页面加载时显示已存储的问题
+        window.addEventListener('load', loadQuestions);
+
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            alert('Thank you for your message! We will get back to you soon.\n感谢您的提问！我们会尽快回复。');
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+            
+            // 发送邮件
+            const mailtoLink = `mailto:shipinglau@gmail.com?subject=问题来自 ${name}&body=发件人：${name}%0D%0A邮箱：${email}%0D%0A%0D%0A问题内容：%0D%0A${message}`;
+            window.open(mailtoLink); // 改用 window.open 避免页面跳转
+            
+            // 添加问题到列表
+            const question = {
+                id: Date.now(),
+                name,
+                email,
+                message,
+                date: new Date().toLocaleString(),
+                replies: []
+            };
+            
+            questions.unshift(question);
+            saveQuestions();
+            displayQuestions();
+            
+            // 重置表单
             this.reset();
         });
+
+        function saveQuestions() {
+            localStorage.setItem('questions', JSON.stringify(questions));
+        }
+
+        function loadQuestions() {
+            const saved = localStorage.getItem('questions');
+            if (saved) {
+                questions = JSON.parse(saved);
+                displayQuestions();
+            }
+        }
+
+        function displayQuestions() {
+            const container = document.getElementById('questionsList');
+            container.innerHTML = questions.map(q => `
+                <div class="question-item">
+                    <div class="question-header">
+                        <strong>${q.name}</strong>
+                        <span>${q.date}</span>
+                    </div>
+                    <div class="question-content">${q.message}</div>
+                    ${q.replies.map(reply => `
+                        <div class="reply-content" style="margin-left: 20px; color: #666;">
+                            <strong>回复：</strong> ${reply}
+                        </div>
+                    `).join('')}
+                    <div class="reply-form">
+                        <textarea placeholder="输入回复内容" class="reply-input"></textarea>
+                        <button class="btn" onclick="addReply(${q.id})">回复</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addReply(questionId) {
+            const questionItem = event.target.closest('.question-item');
+            const replyInput = questionItem.querySelector('.reply-input');
+            const replyText = replyInput.value.trim();
+            
+            if (replyText) {
+                // 找到对应的问题并添加回复
+                const question = questions.find(q => q.id === questionId);
+                if (question) {
+                    question.replies.push(replyText);
+                    saveQuestions();
+                    displayQuestions();
+                }
+                replyInput.value = ''; // 清空输入框
+            }
+        }
     </script>
 </body>
 </html>
