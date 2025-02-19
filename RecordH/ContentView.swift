@@ -13,21 +13,11 @@ struct ContentView: View {
     @AppStorage("hasGrantedHealthKitPermission") private var hasGrantedPermission = false
     
     var body: some View {
-        Group {
-            if hasGrantedPermission {
-                DashboardView()
-                    .environmentObject(healthStore)
-                    .environmentObject(themeManager)
-                    .preferredColorScheme(themeManager.colorScheme)
-                    .navigationViewStyle(StackNavigationViewStyle())
-            } else {
-                WelcomeView(hasGrantedPermission: $hasGrantedPermission)
-                    .environmentObject(healthStore)
-                    .environmentObject(themeManager)
-                    .preferredColorScheme(themeManager.colorScheme)
-                    .navigationViewStyle(StackNavigationViewStyle())
-            }
-        }
+        WelcomeView(hasGrantedPermission: $hasGrantedPermission)
+            .environmentObject(healthStore)
+            .environmentObject(themeManager)
+            .preferredColorScheme(themeManager.colorScheme)
+            .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 
