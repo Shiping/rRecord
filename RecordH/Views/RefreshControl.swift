@@ -1,60 +1,85 @@
 import SwiftUI
 
 struct RefreshControl: View {
-    @Binding var isRefreshing: Bool
-    @Environment(\.colorScheme) var colorScheme
-    @StateObject private var theme = Theme.shared
-    let action: () -> Void
+    let isRefreshing: Bool
+    let onRefresh: () async -> Void
     
-    @State private var pullTriggered = false
+    @Environment(\.theme) var theme
+    @State private var offset: CGFloat = 0
+    @State private var isRefreshTriggered = false
+    
+    private let threshold: CGFloat = 60
     
     var body: some View {
         GeometryReader { geometry in
-            let pullDistance = geometry.frame(in: .global).minY
-            let threshold: CGFloat = 70
-            
-            if pullDistance > threshold && !pullTriggered {
-                Color.clear
-                    .preference(key: RefreshPreferenceKey.self, value: true)
-                    .onAppear {
-                        pullTriggered = true
-                        if !isRefreshing {
-                            action()
-                        }
-                    }
-            } else if pullDistance <= 0 {
-                Color.clear
-                    .preference(key: RefreshPreferenceKey.self, value: false)
-                    .onAppear {
-                        pullTriggered = false
-                    }
-            }
-            
-            HStack {
-                Spacer()
+            ZStack(alignment: .center) {
                 if isRefreshing {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: theme.color(.accent, scheme: colorScheme)))
-                } else if pullDistance > 0 {
-                    Image(systemName: "arrow.down")
-                        .foregroundColor(theme.color(.accent, scheme: colorScheme))
-                        .rotationEffect(.degrees((min(pullDistance, threshold) / threshold) * 180.0))
+                        .tint(theme.accentColor)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(theme.accentColor)
+                        .rotationEffect(.degrees(rotationAngle))
                 }
-                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .offset(y: -offset)
+            .onChange(of: offset) { _, newOffset in
+                // Check if we've crossed the threshold and haven't already triggered
+                if newOffset > threshold && !isRefreshTriggered && !isRefreshing {
+                    isRefreshTriggered = true
+                    Task {
+                        await onRefresh()
+                        isRefreshTriggered = false
+                    }
+                }
+            }
+            .onAppear {
+                offset = geometry.frame(in: .global).minY
             }
         }
         .frame(height: 50)
     }
+    
+    private var rotationAngle: Double {
+        min(offset / threshold * 180, 180)
+    }
 }
 
-private struct RefreshPreferenceKey: PreferenceKey {
-    static var defaultValue: Bool = false
+struct MyRefreshableScrollView<Content: View>: View {
+    let content: Content
+    let isRefreshing: Bool
+    let onRefresh: () async -> Void
     
-    static func reduce(value: inout Bool, nextValue: () -> Bool) {
-        value = nextValue()
+    init(isRefreshing: Bool = false,
+         onRefresh: @escaping () async -> Void,
+         @ViewBuilder content: () -> Content) {
+        self.isRefreshing = isRefreshing
+        self.onRefresh = onRefresh
+        self.content = content()
+    }
+    
+    var body: some View {
+        ScrollView {
+            RefreshControl(isRefreshing: isRefreshing, onRefresh: onRefresh)
+            content
+        }
     }
 }
 
 #Preview {
-    RefreshControl(isRefreshing: .constant(true)) {}
+    MyRefreshableScrollView(isRefreshing: false) {
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+    } content: {
+        VStack(spacing: 20) {
+            ForEach(0..<10) { i in
+                Text("Item \(i)")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(10)
+            }
+        }
+        .padding()
+    }
 }

@@ -8,21 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject private var healthStore: HealthStore
-    @EnvironmentObject private var themeManager: ThemeManager
-    @AppStorage("hasGrantedHealthKitPermission") private var hasGrantedPermission = false
+    @EnvironmentObject var healthStore: HealthStore
+    @State private var showingWelcome = true
     
     var body: some View {
-        WelcomeView(hasGrantedPermission: $hasGrantedPermission)
-            .environmentObject(healthStore)
-            .environmentObject(themeManager)
-            .preferredColorScheme(themeManager.colorScheme)
-            .navigationViewStyle(StackNavigationViewStyle())
+        if showingWelcome {
+            WelcomeView(isPresented: $showingWelcome)
+                .environmentObject(healthStore)
+        } else {
+            NavigationStack {
+                DashboardView()
+                    .environmentObject(healthStore)
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
         .environmentObject(HealthStore())
-        .environmentObject(ThemeManager())
 }

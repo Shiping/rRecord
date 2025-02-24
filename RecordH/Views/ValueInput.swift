@@ -1,194 +1,109 @@
 import SwiftUI
 
-struct ValueInputField: View {
-    let label: String
-    @Binding var value: Double?
-    @Binding var isEditing: Bool
-    let unit: String
-    @Environment(\.colorScheme) var colorScheme
-    @StateObject private var theme = Theme.shared
+struct ValueInput: View {
+    let metric: HealthMetric
+    @Binding var value: Double
+    @Environment(\.theme) var theme
+    
+    private let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 1
+        return formatter
+    }()
     
     var body: some View {
-        Button(action: {
-            isEditing = true
-        }) {
-            HStack {
-                Text(label)
-                Spacer()
-                HStack(spacing: 4) {
-                    if let value = value {
-                        Text(String(format: "%.1f", value))
-                            .foregroundColor(theme.color(.text, scheme: colorScheme))
-                    } else {
-                        Text("点击输入")
-                            .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
-                    }
-                    Text(unit)
-                        .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
-                }
-                .frame(minWidth: 100, alignment: .trailing)
-            }
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
+        HStack {
+            TextField("输入\(metric.name)", value: $value, formatter: formatter)
+                .keyboardType(.decimalPad)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .multilineTextAlignment(.trailing)
+            
+            Text(metric.unit)
+                .foregroundColor(theme.secondaryTextColor)
         }
-        .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $isEditing) {
-            NumberInput(value: $value, isPresented: $isEditing, label: label, unit: unit)
-        }
+        .padding(.horizontal)
     }
 }
 
-struct NumberInput: View {
-    @Binding var value: Double?
-    @Binding var isPresented: Bool
-    let label: String
-    let unit: String
-    @State private var textValue: String = ""
-    @Environment(\.colorScheme) var colorScheme
-    @StateObject private var theme = Theme.shared
+struct ValueInputWithValidation: View {
+    let metric: HealthMetric
+    @Binding var value: Double
+    @Binding var isValid: Bool
+    @Environment(\.theme) var theme
     
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color(UIColor.systemBackground)
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 30) {
-                    // Value display
-                    HStack(spacing: 8) {
-                        Text(textValue.isEmpty ? "请输入数值" : textValue)
-                            .font(.system(size: 42, weight: .medium, design: .rounded))
-                            .minimumScaleFactor(0.5)
-                            .lineLimit(1)
-                            .foregroundColor(theme.color(.text, scheme: colorScheme))
-                        Text(unit)
-                            .font(.title2)
-                            .foregroundColor(theme.color(.secondaryText, scheme: colorScheme))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 80)
-                    .padding()
-                    .background(theme.color(.cardBackground, scheme: colorScheme))
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
-                    
-                    Spacer()
-                    
-                    // Number pad
-                    VStack(spacing: 15) {
-                        ForEach([["7","8","9"], ["4","5","6"], ["1","2","3"], [".","0","⌫"]], id: \.self) { row in
-                            HStack(spacing: 15) {
-                                ForEach(row, id: \.self) { key in
-                                    NumberButton(key: key) {
-                                        handleInput(key)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
-                }
-                .padding()
-            }
-            .navigationBarTitle(label, displayMode: .inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        isPresented = false
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("清空") {
-                        textValue = ""
-                        value = nil
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        if let doubleValue = Double(textValue) {
-                            value = doubleValue
-                        }
-                        isPresented = false
-                    }
-                    .disabled(textValue.isEmpty)
-                }
-            }
-            .onAppear {
-                if let value = value {
-                    textValue = String(format: "%.1f", value)
-                }
-            }
+    private let range: ClosedRange<Double>
+    
+    init(metric: HealthMetric, value: Binding<Double>, isValid: Binding<Bool>) {
+        self.metric = metric
+        self._value = value
+        self._isValid = isValid
+        
+        // Define reasonable ranges for each metric
+        switch metric {
+        case .bmi:
+            range = 10...50
+        case .bodyMass:
+            range = 20...200
+        case .bodyFat:
+            range = 1...50
+        case .bloodGlucose:
+            range = 2...20
+        case .bloodPressureSystolic:
+            range = 70...200
+        case .bloodPressureDiastolic:
+            range = 40...130
+        case .uricAcid:
+            range = 2...10
+        case .stepCount:
+            range = 0...100000
+        case .flightsClimbed:
+            range = 0...1000
+        case .sleepHours:
+            range = 0...24
+        case .activeEnergy:
+            range = 0...10000
         }
     }
     
-    private func handleInput(_ input: String) {
-        switch input {
-        case "⌫":
-            if !textValue.isEmpty {
-                textValue.removeLast()
-            }
-        case ".":
-            if !textValue.contains(".") {
-                textValue += textValue.isEmpty ? "0." : "."
-            }
-        default:
-            if textValue.contains(".") {
-                let parts = textValue.split(separator: ".")
-                if parts.count > 1 && parts[1].count >= 1 {
-                    return
-                }
-            }
-            textValue += input
-        }
-    }
-}
-
-struct NumberButton: View {
-    let key: String
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-    @StateObject private var theme = Theme.shared
-    @State private var isPressed = false
-    
     var body: some View {
-        Button(action: {
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = true
+        VStack(spacing: 4) {
+            ValueInput(metric: metric, value: $value)
+            
+            if !isValid {
+                Text("有效范围: \(range.lowerBound.formatted()) - \(range.upperBound.formatted()) \(metric.unit)")
+                    .font(.caption)
+                    .foregroundColor(theme.badColor)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    isPressed = false
-                }
-                action()
-            }
-        }) {
-            ZStack {
-                Circle()
-                    .fill(theme.color(.cardBackground, scheme: colorScheme))
-                    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-                
-                if key == "⌫" {
-                    Image(systemName: "delete.left.fill")
-                        .font(.title2)
-                        .foregroundColor(.red)
-                } else {
-                    Text(key)
-                        .font(.title)
-                        .foregroundColor(theme.color(.text, scheme: colorScheme))
-                }
-            }
-            .scaleEffect(isPressed ? 0.95 : 1.0)
         }
-        .frame(width: 75, height: 75)
+        .onChange(of: value) { oldValue, newValue in
+            isValid = range.contains(newValue)
+        }
     }
 }
 
 #Preview {
-    ValueInputField(
-        label: "收缩压",
-        value: .constant(nil),
-        isEditing: .constant(false),
-        unit: "mmHg"
-    )
+    VStack(spacing: 20) {
+        // Simple value input
+        ValueInput(
+            metric: .bodyMass,
+            value: .constant(70.5)
+        )
+        
+        // Value input with validation
+        ValueInputWithValidation(
+            metric: .bodyMass,
+            value: .constant(70.5),
+            isValid: .constant(true)
+        )
+        
+        // Invalid value
+        ValueInputWithValidation(
+            metric: .bodyMass,
+            value: .constant(500),
+            isValid: .constant(false)
+        )
+    }
+    .padding()
 }

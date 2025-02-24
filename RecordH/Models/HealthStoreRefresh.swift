@@ -1,56 +1,63 @@
 import Foundation
 import HealthKit
 
+@MainActor
 extension HealthStore {
-    // MARK: - Properties
     
-    // MARK: - Data Refresh Methods
-    @objc public dynamic func refreshHealthData(completion: @escaping () -> Void = {}) {
-        print("refreshHealthData called")
-        // First refresh today's data
-        // Then fetch historical data
-        fetchLatestHealthData { [weak self] in
-            self?.saveData()
-            completion()
+    func refreshAllData() async {
+        guard !isFetchingData else { return }
+        isFetchingData = true
+        defer { isFetchingData = false }
+        
+        do {
+            try await ensureAuthorization()
+            try await refreshMetrics()
+            saveData()
+            NotificationCenter.default.post(name: .init("HealthDataDidUpdate"), object: nil)
+            lastUpdate = Date()
+        } catch {
+            self.error = .fetchFailed(error)
         }
     }
-
-    func fetchLatestHealthData(completion: @escaping () -> Void = {}) {
-        print("fetchLatestHealthData called")
-        let calendar = Calendar.current
-        let endDate = Date()
-        // Get data since last update, or the last 7 days if no last update
-        let startDate = self.lastUpdate ?? calendar.date(byAdding: .day, value: -7, to: endDate) ?? endDate
-
-        let group = DispatchGroup()
-
-        // Move the whole process to a background queue
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            print("fetchLatestHealthData - inside DispatchQueue.global(qos: .background).async")
-
-            // Fetch all available health metrics
-            print("fetchLatestHealthData - calling fetchSteps")
-            self?.fetchSteps(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchHeartRate")
-            self?.fetchHeartRate(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchActiveEnergy")
-            self?.fetchActiveEnergy(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchRestingEnergy")
-            self?.fetchRestingEnergy(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchDistance")
-            self?.fetchDistance(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchBloodOxygen")
-            self?.fetchBloodOxygen(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchFlightsClimbed")
-            self?.fetchFlightsClimbed(startDate: startDate, endDate: endDate, group: group)
-            print("fetchLatestHealthData - calling fetchSleep")
-            self?.fetchSleep(startDate: startDate, endDate: endDate, group: group)
-
-            group.notify(queue: .main) {
-                guard let self = self else { return }
-self.lastUpdate = endDate
-                completion()
+    
+    private func refreshMetrics() async throws {
+        for metric in HealthMetric.allCases {
+            guard let type = metric.hkType else { continue }
+            
+            let now = Date()
+            let past = Calendar.current.date(byAdding: .day, value: -7, to: now) ?? now
+            
+            let samples = try await fetchSamples(for: type,
+                                               from: past,
+                                               to: now)
+            
+            if let latestSample = samples.first,
+               let record = HealthRecord(sample: latestSample, metric: metric) {
+                updateRecord(record)
             }
         }
     }
+    
+    private func updateRecord(_ record: HealthRecord) {
+        if let index = healthRecords.firstIndex(where: { $0.metric == record.metric }) {
+            healthRecords[index] = record
+        } else {
+            healthRecords.append(record)
+        }
+    }
+    
+    func clearData() {
+        healthRecords.removeAll()
+        saveData()
+    }
+    
+    func markError(_ error: Error) {
+        self.error = .fetchFailed(error)
+    }
+    
+    func clearError() {
+        error = nil
+    }
 }
+
+extension HealthStore: @unchecked Sendable {}

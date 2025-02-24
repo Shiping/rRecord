@@ -3,353 +3,254 @@ import HealthKit
 
 struct WelcomeView: View {
     @EnvironmentObject var healthStore: HealthStore
-    @Binding var hasGrantedPermission: Bool
-    @State private var isAuthorizationInProgress = false
-    @State private var showError = false
-    @State private var animationScale = 1.0
-    @State private var rotationDegrees = 0.0
-    @State private var showInitialWelcome = true
-    @State private var showHealthPermissionRequest = false
-    @State private var rowOffsets: [CGFloat] = Array(repeating: -20, count: 6)
-
+    @Environment(\.theme) var theme
+    @Binding var isPresented: Bool
+    
+    @State private var currentPage = 0
+    @State private var gender: Gender = .male
+    @State private var birthday = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+    @State private var height: Double = 170.0
+    @State private var location: String = ""
+    @State private var showingError = false
+    @State private var errorMessage = ""
+    @State private var isSettingUp = false
+    
+    private let pages = [
+        WelcomePage(title: "欢迎使用健康记录",
+                   subtitle: "记录和追踪您的健康数据",
+                   image: "heart.text.square.fill"),
+        WelcomePage(title: "数据安全",
+                   subtitle: "您的健康数据安全存储在设备中",
+                   image: "lock.shield.fill"),
+        WelcomePage(title: "智能分析",
+                   subtitle: "AI助手帮助您分析健康趋势",
+                   image: "brain.head.profile")
+    ]
+    
     var body: some View {
-        if showInitialWelcome {
-            ZStack {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        Image(systemName: "heart.text.square.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.red)
-                            .padding(.top, 20)
-                        
-                        VStack(spacing: 15) {
-                            Text("Mind Ur Meals")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .offset(x: showInitialWelcome ? 0 : -100)
-                                .opacity(showInitialWelcome ? 1 : 0)
-                                .animation(.easeInOut(duration: 1).delay(0.5), value: showInitialWelcome)
-                            
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.gray.opacity(0.5), lineWidth: 2)
-                                    .frame(width: 60, height: 60)
-                                    .rotationEffect(.degrees(rotationDegrees))
-                            }
-                            
-                            Text("Move Ur Feet")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.3, green: 0.2, blue: 0.4), Color(red: 0.2, green: 0.2, blue: 0.3)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .offset(x: showInitialWelcome ? 0 : 100)
-                                .opacity(showInitialWelcome ? 1 : 0)
-                                .animation(.easeInOut(duration: 1).delay(1.0), value: showInitialWelcome)
-
-                            Text("管住嘴")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .offset(y: showInitialWelcome ? 0 : 50)
-                                .opacity(showInitialWelcome ? 1 : 0)
-                                .animation(.easeInOut(duration: 1).delay(1.5), value: showInitialWelcome)
-
-                            Text("迈开腿")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.3, green: 0.2, blue: 0.4), Color(red: 0.2, green: 0.2, blue: 0.3)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .offset(y: showInitialWelcome ? 0 : 50)
-                                .opacity(showInitialWelcome ? 1 : 0)
-                                .animation(.easeInOut(duration: 1).delay(2.0), value: showInitialWelcome)
+        VStack {
+            if currentPage < pages.count {
+                onboardingView
+            } else {
+                profileSetupView
+            }
+        }
+        .alert("错误", isPresented: $showingError) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+    
+    private var onboardingView: some View {
+        VStack {
+            TabView(selection: $currentPage) {
+                ForEach(0..<pages.count, id: \.self) { index in
+                    WelcomePageView(page: pages[index])
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page)
+            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            
+            HStack {
+                if currentPage > 0 {
+                    Button("上一步") {
+                        withAnimation {
+                            currentPage -= 1
                         }
-                        .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 0)
-                        .scaleEffect(animationScale)
-                        .padding(.horizontal)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 2
-                                )
-                                .padding(5)
-                        )
-                        .onAppear {
-                            withAnimation(
-                                Animation.easeInOut(duration: 2)
-                                    .repeatForever(autoreverses: true)
-                            ) {
-                                animationScale = 1.05
-                            }
-
-                            withAnimation(Animation.linear(duration: 4).repeatForever(autoreverses: false)) {
-                                rotationDegrees = 360
-                            }
-                            
-                            // Animate row offsets
-                            for index in 0..<rowOffsets.count {
-                                withAnimation(.easeInOut(duration: 1).delay(4.0 + Double(index) * 0.2)) {
-                                    rowOffsets[index] = 0
-                                }
-                            }
-                        }
-
-                        Text("欢迎使用健康记录")
-                            .font(.largeTitle)
-                            .bold()
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .padding(.vertical)
-                            .opacity(showInitialWelcome ? 1 : 0)
-                            .animation(.easeInOut(duration: 1).delay(2.5), value: showInitialWelcome)
-
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("健康数据跟踪")
-                                .font(.title2)
-                                .bold()
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-
-                            Text("此功能将帮助您跟踪以下健康指标：")
-                                .font(.body)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-
-                            VStack(alignment: .leading, spacing: 10) {
-                            let items = [
-                                ("figure.walk", "步数"),
-                                ("bed.double.fill", "睡眠数据"),
-                                ("heart.fill", "心率"),
-                                ("flame.fill", "活动能量"),
-                                ("stairs", "爬楼层数"),
-                                ("chart.bar.fill", "体脂率")
-                            ]
-                                
-                                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                                    PermissionRow(icon: item.0, text: item.1)
-                                        .offset(x: showInitialWelcome ? 0 : rowOffsets[index])
-                                        .opacity(showInitialWelcome ? 1 : 0)
-                                }
-                            }
-                            .padding(.leading)
-                        }
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.gray.opacity(0.1)))
-                        
-                        // Add padding at the bottom to account for the fixed button
-                        Spacer().frame(height: 80)
                     }
-                    .padding()
                 }
                 
-                // Fixed button at the bottom
-                VStack {
-                    Spacer()
-                    Button(action: {
-                        withAnimation {
-                            showInitialWelcome = false
-                            showHealthPermissionRequest = true
+                Spacer()
+                
+                Button(currentPage == pages.count - 1 ? "开始设置" : "下一步") {
+                    withAnimation {
+                        if currentPage < pages.count - 1 {
+                            currentPage += 1
+                        } else {
+                            currentPage = pages.count
                         }
-                    }) {
-                        Text("开始")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(Color.blue)
-                            .cornerRadius(12)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
                 }
-                .background(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0), Color.white],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 100)
-                    .allowsHitTesting(false)
-                )
             }
-        } else if showHealthPermissionRequest {
-            ScrollView {
-                VStack(spacing: 30) {
-                    Text("授权健康数据")
-                        .font(.largeTitle)
-                        .bold()
-                        .padding(.top, 40)
-
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("您的健康伙伴")
-                            .font(.title2)
-                            .bold()
-
-                        Text("请允许访问您的健康数据，以便我们为您提供以下服务：")
-                            .padding(.bottom, 10)
-
-                        VStack(alignment: .leading, spacing: 15) {
-                            PermissionFeature(icon: "chart.bar.fill", title: "数据追踪", description: "记录并分析您的健康数据变化")
-                            PermissionFeature(icon: "bell.fill", title: "健康提醒", description: "根据数据变化提供及时提醒")
-                            PermissionFeature(icon: "chart.line.uptrend.xyaxis", title: "趋势分析", description: "了解您的健康状况发展趋势")
-                            PermissionFeature(icon: "person.fill.checkmark", title: "个性化建议", description: "基于数据提供健康建议")
-                        }
-                        .padding(.leading, 10)
+            .padding()
+        }
+    }
+    
+    private var profileSetupView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("个人信息设置")
+                    .font(.title)
+                    .padding(.top)
+                
+                VStack(alignment: .leading) {
+                    Text("性别")
+                        .font(.headline)
+                    
+                    Picker("性别", selection: $gender) {
+                        Text("男").tag(Gender.male)
+                        Text("女").tag(Gender.female)
+                        Text("其他").tag(Gender.other)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .padding()
+                
+                VStack(alignment: .leading) {
+                    Text("生日")
+                        .font(.headline)
+                    
+                    DatePicker("生日",
+                             selection: $birthday,
+                             displayedComponents: .date)
+                }
+                .padding()
+                
+                VStack(alignment: .leading) {
+                    Text("身高 (cm)")
+                        .font(.headline)
+                    
+                    TextField("身高", value: $height, formatter: NumberFormatter())
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .padding()
+                
+                VStack(alignment: .leading) {
+                    Text("所在地")
+                        .font(.headline)
+                    
+                    TextField("请输入您的所在地，例如：里水松涛", text: $location)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                }
+                .padding()
+                
+                if isSettingUp {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                        Text("正在设置...")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                } else {
+                    Button(action: completeSetup) {
+                        Text("完成设置")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(theme.accentColor)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.1)))
-                    .padding(.horizontal)
-
-                    if showError {
-                        Text("需要健康数据访问权限才能使用此功能。\n您可以在设置中修改权限。")
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                    }
-
-                    Button(action: requestHealthKitPermission) {
-                        HStack(spacing: 8) {
-                            if isAuthorizationInProgress {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            }
-                            Text("继续")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                    }
-                    .foregroundColor(.white)
-                    .background(isAuthorizationInProgress ? Color.gray : Color.blue)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .disabled(isAuthorizationInProgress)
-                    .padding(.bottom, 30)
-                }
-            }
-            .transition(.opacity)
-        } else {
-            DashboardView()
-                .transition(.opacity)
-        }
-    }
-    
-    private func requestHealthKitPermission() {
-        guard !isAuthorizationInProgress else { return }
-        
-        isAuthorizationInProgress = true
-        showError = false
-        
-        healthStore.requestInitialAuthorization { success in
-            DispatchQueue.main.async {
-                isAuthorizationInProgress = false
-                if success {
-                    withAnimation {
-                        hasGrantedPermission = true
-                        showHealthPermissionRequest = false
-                    }
-                } else {
-                    withAnimation {
-                        showError = true
-                    }
                 }
             }
         }
+        .disabled(isSettingUp)
     }
-}
-
-struct PermissionRow: View {
-    let icon: String
-    let text: String
     
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 30)
-            Text(text)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color(red: 0.2, green: 0.2, blue: 0.3), Color(red: 0.3, green: 0.2, blue: 0.4)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+    private func completeSetup() {
+        guard !isSettingUp else { return }
+        
+        // Input validation
+        guard height >= 100 && height <= 250 else {
+            errorMessage = "请输入有效的身高 (100-250 cm)"
+            showingError = true
+            return
+        }
+        
+        let now = Date()
+        let hundredYearsAgo = Calendar.current.date(byAdding: .year, value: -100, to: now) ?? now
+        guard birthday > hundredYearsAgo && birthday <= now else {
+            errorMessage = "请输入有效的出生日期"
+            showingError = true
+            return
+        }
+        
+        isSettingUp = true
+        
+        Task {
+            do {
+                // Create and save user profile first
+                let profile = UserProfile(
+                    gender: gender,
+                    birthday: birthday,
+                    height: height,
+                    location: location.isEmpty ? nil : location
                 )
-        }
-    }
-}
-
-struct PermissionFeature: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 15) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.blue)
-                .frame(width: 30)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                
+                await MainActor.run {
+                    healthStore.userProfile = profile
+                    healthStore.saveData()
+                }
+                
+                // Check HealthKit availability
+                guard HKHealthStore.isHealthDataAvailable() else {
+                    throw HealthStoreError.healthKitNotAvailable
+                }
+                
+                // Request HealthKit authorization with retry
+                try await healthStore.ensureAuthorization()
+                
+                // Refresh initial data
+                await healthStore.refreshData()
+                
+                // Close welcome screen on success
+                await MainActor.run {
+                    isPresented = false
+                }
+            } catch {
+                await MainActor.run {
+                    if let healthError = error as? HealthStoreError {
+                        errorMessage = healthError.localizedDescription
+                    } else {
+                        errorMessage = "设置过程中出错：\(error.localizedDescription)"
+                    }
+                    showingError = true
+                    isSettingUp = false
+                }
             }
         }
     }
 }
 
-struct WelcomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        WelcomeView(hasGrantedPermission: .constant(false))
-            .environmentObject(HealthStore())
+struct WelcomePage {
+    let title: String
+    let subtitle: String
+    let image: String
+}
+
+struct WelcomePageView: View {
+    let page: WelcomePage
+    @Environment(\.theme) var theme
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: page.image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 100)
+                .foregroundStyle(theme.accentColor)
+            
+            Text(page.title)
+                .font(.title)
+                .bold()
+            
+            Text(page.subtitle)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal)
+        }
+        .padding()
     }
+}
+
+#Preview {
+    WelcomeView(isPresented: .constant(true))
+        .environmentObject(HealthStore.shared)
 }

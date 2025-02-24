@@ -1,46 +1,35 @@
 import SwiftUI
 
 struct MedicalReferencesView: View {
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.theme) var theme
+    
+    private var metricsWithReferences: [HealthMetric] {
+        HealthMetric.allCases.filter { 
+            MedicalReferences.references[$0] != nil 
+        }
+    }
     
     var body: some View {
         List {
-            Section(header: Text("健康指标参考来源")) {
-                ForEach(HealthRecord.RecordType.allCases.filter { MedicalReferences.references[$0] != nil }, id: \.self) { type in
-                    if let reference = MedicalReferences.references[type] {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(type.displayName)
-                                .font(.headline)
-                                .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("参考数据来源：\(reference.source)")
-                                    .font(.subheadline)
-                                Text("发布机构：\(reference.organization)")
-                                    .font(.subheadline)
-                                Text("发布年份：\(reference.year)")
-                                    .font(.subheadline)
-                                Text("正常范围：\(reference.normalRange)")
-                                    .font(.subheadline)
-                                Link("查看原文", destination: URL(string: reference.url)!)
-                                    .font(.subheadline)
-                                    .foregroundColor(Theme.color(.accent, scheme: colorScheme))
-                            }
-                            .foregroundColor(Theme.color(.text, scheme: colorScheme))
+            Section(header: Text("健康指标参考范围")) {
+                ForEach(metricsWithReferences, id: \.self) { metric in
+                    let reference = MedicalReferences.references[metric]!
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(metric.name)
+                            .font(.headline)
+                            .foregroundColor(theme.accentColor)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("正常范围：\(reference.lowerBound.formatted()) - \(reference.upperBound.formatted()) \(reference.unit)")
+                                .font(.subheadline)
+                                .foregroundColor(theme.textColor)
                         }
-                        .padding(.vertical, 8)
                     }
+                    .padding(.vertical, 8)
                 }
             }
-            
-            Section(header: Text("免责声明")) {
-                Text(MedicalReferences.disclaimer)
-                    .font(.subheadline)
-                    .foregroundColor(Theme.color(.text, scheme: colorScheme))
-                    .padding(.vertical, 8)
-            }
         }
-        .navigationTitle("医学参考")
+        .navigationTitle("指标参考")
     }
 }
 
