@@ -20,7 +20,7 @@ struct ValueInput: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .multilineTextAlignment(.trailing)
             
-            Text(metric.unit)
+            Text(metric.unitString)
                 .foregroundColor(theme.secondaryTextColor)
         }
         .padding(.horizontal)
@@ -33,38 +33,43 @@ struct ValueInputWithValidation: View {
     @Binding var isValid: Bool
     @Environment(\.theme) var theme
     
-    private let range: ClosedRange<Double>
+    private var range: ClosedRange<Double> {
+        switch metric {
+        case .bmi:
+            return 10...50
+        case .bodyMass:
+            return 20...200
+        case .bodyFat:
+            return 1...50
+        case .bloodGlucose:
+            return 2...20
+        case .bloodPressureSystolic:
+            return 70...200
+        case .bloodPressureDiastolic:
+            return 40...130
+        case .uricAcid:
+            return 2...10
+        case .stepCount:
+            return 0...100000
+        case .flightsClimbed:
+            return 0...1000
+        case .sleepHours:
+            return 0...24
+        case .activeEnergy:
+            return 0...10000
+        case .heartRate:
+            return 30...220
+        case .bodyTemperature:
+            return 35...42
+        case .height:
+            return 50...250
+        }
+    }
     
     init(metric: HealthMetric, value: Binding<Double>, isValid: Binding<Bool>) {
         self.metric = metric
         self._value = value
         self._isValid = isValid
-        
-        // Define reasonable ranges for each metric
-        switch metric {
-        case .bmi:
-            range = 10...50
-        case .bodyMass:
-            range = 20...200
-        case .bodyFat:
-            range = 1...50
-        case .bloodGlucose:
-            range = 2...20
-        case .bloodPressureSystolic:
-            range = 70...200
-        case .bloodPressureDiastolic:
-            range = 40...130
-        case .uricAcid:
-            range = 2...10
-        case .stepCount:
-            range = 0...100000
-        case .flightsClimbed:
-            range = 0...1000
-        case .sleepHours:
-            range = 0...24
-        case .activeEnergy:
-            range = 0...10000
-        }
     }
     
     var body: some View {
@@ -72,7 +77,7 @@ struct ValueInputWithValidation: View {
             ValueInput(metric: metric, value: $value)
             
             if !isValid {
-                Text("有效范围: \(range.lowerBound.formatted()) - \(range.upperBound.formatted()) \(metric.unit)")
+                Text("有效范围: \(range.lowerBound.formatted()) - \(range.upperBound.formatted()) \(metric.unitString)")
                     .font(.caption)
                     .foregroundColor(theme.badColor)
             }

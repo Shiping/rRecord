@@ -1,213 +1,340 @@
 import Foundation
 import HealthKit
-import SwiftUI
-import Combine
 
 @MainActor
-public class HealthStore: NSObject, ObservableObject {
-    public static let shared = HealthStore()
+public final class HealthStore: ObservableObject {
+    @MainActor
+    public static let shared: HealthStore = {
+        let instance = HealthStore()
+        Task { @MainActor in
+            await instance.initialize()
+        }
+        return instance
+    }()
     
     let healthStore = HKHealthStore()
-    private var cancellables = Set<AnyCancellable>()
+    private(set) var configManager: AIConfigurationManager!
+    private(set) var aiManager: AIManager!
     
-    @Published var userProfile: UserProfile?
-    @Published var healthRecords: [HealthRecord] = []
-    @Published var lastUpdate: Date {
-        didSet {
-            // Store lastUpdate as timestamp for consistency
-            UserDefaults.standard.set(lastUpdate.timeIntervalSince1970, forKey: "lastUpdate")
+    @Published var authorizeError: HealthStoreError?
+    @Published private var records: [HealthMetric: [HealthRecord]] = [:]
+    @Published private(set) var isAuthorized = false
+    @Published private(set) var isLoading = false
+    @Published private(set) var isFetchingData = false
+    @Published private(set) var lastUpdate: Date?
+    @Published private(set) var error: Error?
+    @Published public var userProfile = UserProfile.sample
+    var hasPermission = false
+
+    private let supportedMetrics: [HealthMetric] = [
+        .bodyMass,
+        .bloodPressureSystolic,
+        .bloodPressureDiastolic,
+        .bloodGlucose,
+        .stepCount,
+        .flightsClimbed,
+        .activeEnergy,
+        .bodyFat,
+        .heartRate,
+        .bodyTemperature,
+        .height
+    ]
+    
+    private var healthKitTypes: [HealthMetric: HKQuantityType] = [
+        .bodyMass: HKQuantityType(.bodyMass),
+        .bloodPressureSystolic: HKQuantityType(.bloodPressureSystolic),
+        .bloodPressureDiastolic: HKQuantityType(.bloodPressureDiastolic),
+        .bloodGlucose: HKQuantityType(.bloodGlucose),
+        .stepCount:  HKQuantityType(.stepCount),
+        .flightsClimbed: HKQuantityType(.flightsClimbed),
+        .activeEnergy: HKQuantityType(.activeEnergyBurned),
+        .bodyFat: HKQuantityType(.bodyFatPercentage),
+        .heartRate: HKQuantityType(.heartRate),
+        .bodyTemperature: HKQuantityType(.bodyTemperature),
+        .height: HKQuantityType(.height)
+    ]
+    
+    private init() {}
+    
+    private func initialize() async {
+        setupDefaults()
+        // Initialize dependencies
+        configManager = AIConfigurationManager.shared
+        aiManager = AIManager.shared
+        
+        // Load user data
+        await loadUserProfile()
+        try? await setupBackgroundDelivery()
+    }
+    
+    private func setupDefaults() {
+        // Setup initial state that doesn't require async
+        isAuthorized = false
+        isLoading = false
+        isFetchingData = false
+        hasPermission = false
+    }
+    
+    // MARK: - User Profile Management
+    
+    public func updateUserProfile(gender: Gender? = nil,
+                                birthday: Date? = nil,
+                                height: Double? = nil,
+                                location: String? = nil) {
+        var updatedProfile = userProfile
+        updatedProfile.update(gender: gender,
+                            birthday: birthday,
+                            height: height,
+                            location: location)
+        userProfile = updatedProfile
+        saveUserProfile()
+    }
+    
+    internal func saveUserProfile() {
+        if let data = try? JSONEncoder().encode(userProfile) {
+            UserDefaults.standard.set(data, forKey: "userProfile")
         }
     }
-    @Published var error: HealthStoreError?
     
-    @Published var hasPermission = false
-    @Published var isFetchingData = false
-    
-    private let defaults = UserDefaults.standard
-    
-    override init() {
-        // Initialize lastUpdate from stored timestamp or current date
-        if let timestamp = UserDefaults.standard.object(forKey: "lastUpdate") as? TimeInterval {
-            self.lastUpdate = Date(timeIntervalSince1970: timestamp)
-        } else {
-            self.lastUpdate = Date()
+    private func loadUserProfile() async {
+        if let data = UserDefaults.standard.data(forKey: "userProfile"),
+           let profile = try? JSONDecoder().decode(UserProfile.self, from: data) {
+            userProfile = profile
         }
-        
-        super.init()
-        
-        // Try to load data with validation
-        if !tryLoadAndValidateData() {
-            print("Data validation failed, triggering migration...")
-            migrateDataToNewFormat()
-        }
-        
-        checkAuthorizationStatus()
     }
     
-    private func tryLoadAndValidateData() -> Bool {
+    // MARK: - Authorization Management
+    
+    // MARK: - Data Management
+    
+    public func requestAccess() async throws -> Bool {
+        try await ensureAuthorizationWithRetry()
+        return hasPermission
+    }
+    
+    private func ensureAuthorizationWithRetry(retryCount: Int = 3) async throws {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            setState(false)
+            throw HealthStoreError.healthKitNotAvailable
+        }
+        
+        if isAuthorized { return }
+        
+        for attempt in 1...retryCount {
+            do {
+                let types = Set(supportedMetrics.compactMap { healthKitTypes[$0] })
+                try await healthStore.requestAuthorization(toShare: types, read: types)
+                
+                let authorized = supportedMetrics.allSatisfy { metric in
+                    guard let type = healthKitTypes[metric] else { return false }
+                    return healthStore.authorizationStatus(for: type) == .sharingAuthorized
+                }
+                setState(authorized)
+                return
+                
+            } catch let error {
+                if attempt < retryCount {
+                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                    continue
+                }
+                throw error
+            }
+        }
+    }
+
+    public func refreshData() async {
         do {
-            // Load and validate health records
-            if let data = defaults.data(forKey: "healthRecords") {
-                let decoder = JSONDecoder()
-                let records = try decoder.decode([HealthRecord].self, from: data)
-                
-                // Validate dates are within reasonable range
-                let now = Date()
-                let fiveYearsAgo = Calendar.current.date(byAdding: .year, value: -5, to: now) ?? now
-                let oneYearAhead = Calendar.current.date(byAdding: .year, value: 1, to: now) ?? now
-                
-                self.healthRecords = records.filter { record in
-                    let isValid = record.date >= fiveYearsAgo && record.date <= oneYearAhead
-                    if !isValid {
-                        print("Filtering out record with invalid date: \(record.date)")
+            try await refreshAllData()
+        } catch {
+            // Error is already stored in authorizeError
+        }
+    }
+
+    internal func fetchLatestData() async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        var newRecords: [HealthMetric: [HealthRecord]] = [:]
+        
+        for metric in supportedMetrics {
+            guard let type = healthKitTypes[metric] else { continue }
+            
+            let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: .strictEndDate)
+            let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+            
+            do {
+                let samples = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKSample], Error>) in
+                    let query = HKSampleQuery(sampleType: type,
+                                            predicate: predicate,
+                                            limit: 100,
+                                            sortDescriptors: [sortDescriptor]) { _, results, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume(returning: results ?? [])
+                        }
                     }
-                    return isValid
+                    self.healthStore.execute(query)
                 }
-            }
-            
-            // Load and validate user profile
-            if let data = defaults.data(forKey: "userProfile") {
-                let decoder = JSONDecoder()
-                let profile = try decoder.decode(UserProfile.self, from: data)
                 
-                // Validate birthday
-                if profile.birthday <= Date() {
-                    self.userProfile = profile
+                let healthRecords = samples.compactMap { sample -> HealthRecord? in
+                    guard let quantitySample = sample as? HKQuantitySample else { return nil }
+                    let value = quantitySample.quantity.doubleValue(for: metric.unit)
+                    return HealthRecord(id: sample.uuid, 
+                                     metric: metric,
+                                     value: value,
+                                     date: sample.startDate)
+                }
+                
+                if !healthRecords.isEmpty {
+                    newRecords[metric] = healthRecords
+                }
+            } catch {
+                print("Error fetching \(metric): \(error)")
+            }
+        }
+        
+        records = newRecords
+    }
+    
+    internal func save(value: Double, for metric: HealthMetric, date: Date = Date()) async throws {
+        guard let type = healthKitTypes[metric] else {
+            throw HealthStoreError.unsupportedMetric
+        }
+        
+        let quantity = HKQuantity(unit: metric.unit, doubleValue: value)
+        let sample = HKQuantitySample(type: type,
+                                    quantity: quantity,
+                                    start: date,
+                                    end: date)
+        
+        try await healthStore.save(sample)
+        try await fetchLatestData()
+    }
+    
+    internal func delete(_ record: HealthRecord) async throws {
+        guard let type = healthKitTypes[record.metric] else {
+            throw HealthStoreError.unsupportedMetric
+        }
+        
+        let predicate = HKQuery.predicateForObject(with: record.id)
+        
+        let samples = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKSample], Error>) in
+            let query = HKSampleQuery(sampleType: type,
+                                    predicate: predicate,
+                                    limit: 1,
+                                    sortDescriptors: nil) { _, results, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
                 } else {
-                    print("Invalid birthday in future: \(profile.birthday)")
-                    return false
+                    continuation.resume(returning: results ?? [])
                 }
             }
-            
-            return true
-        } catch {
-            print("Error loading or validating data: \(error)")
-            return false
+            healthStore.execute(query)
+        }
+        
+        if let sampleToDelete = samples.first {
+            try await healthStore.delete(sampleToDelete)
+            try await fetchLatestData()
         }
     }
     
-    private func cleanupCorruptedData() {
-        var cleanupPerformed = false
-        
-        for key in ["healthRecords", "userProfile", "lastUpdate"] {
-            if defaults.object(forKey: key) != nil {
-                defaults.removeObject(forKey: key)
-                cleanupPerformed = true
-                print("Cleaned up key: \(key)")
+    // MARK: - Background Updates
+    
+    private func setupBackgroundDelivery() async throws {
+        for metric in supportedMetrics {
+            guard let type = healthKitTypes[metric] else { continue }
+            
+            let frequency: HKUpdateFrequency = {
+                switch metric {
+                case .heartRate, .bloodPressureSystolic, .bloodPressureDiastolic:
+                    return .hourly
+                default:
+                    return .immediate
+                }
+            }()
+            
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                healthStore.enableBackgroundDelivery(for: type, frequency: frequency) { _, error in
+                    if let error = error {
+                        print("Failed to enable background delivery for \(metric): \(error)")
+                    }
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
             }
         }
-        
-        if cleanupPerformed {
-            defaults.synchronize()
-            print("Data cleanup completed at: \(Date())")
+    }
+    
+    // MARK: - State Management
+    
+    internal func setState(_ authorized: Bool) {
+        isAuthorized = authorized
+        hasPermission = authorized
+    }
+    
+    internal func clearUserDefaultsData() {
+        records = [:]
+        error = nil
+        authorizeError = nil
+        isAuthorized = false
+        hasPermission = false
+        UserDefaults.standard.removeObject(forKey: "userProfile")
+        userProfile = UserProfile.sample
+    }
+    
+    internal func refreshMetrics() async throws {
+        try await fetchLatestData()
+    }
+    
+    internal func setIsFetchingData(_ value: Bool) {
+        isFetchingData = value
+    }
+    
+    internal func setLastUpdate(_ date: Date) {
+        lastUpdate = date
+    }
+    
+    internal func setError(_ error: Error?) {
+        self.error = error
+    }
+    
+    public func records(for metric: HealthMetric) -> [HealthRecord] {
+        return records[metric] ?? []
+    }
+    
+    public func latestRecord(for metric: HealthMetric) -> HealthRecord? {
+        return records(for: metric).first
+    }
+    
+    internal func updateRecord(_ record: HealthRecord) {
+        var currentRecords = records[record.metric] ?? []
+        if let index = currentRecords.firstIndex(where: { $0.id == record.id }) {
+            currentRecords[index] = record
+        } else {
+            currentRecords.append(record)
         }
+        records[record.metric] = currentRecords
     }
     
-    func saveData() {
-        do {
-            let encoder = JSONEncoder()
-            
-            // Save health records
-            let healthRecordsData = try encoder.encode(healthRecords)
-            defaults.set(healthRecordsData, forKey: "healthRecords")
-            
-            // Save user profile if exists
-            if let profile = userProfile {
-                let profileData = try encoder.encode(profile)
-                defaults.set(profileData, forKey: "userProfile")
-            }
-            
-            defaults.synchronize()
-            
-        } catch {
-            print("Error saving data: \(error)")
-            self.error = .saveFailed(error)
-        }
-    }
+    // MARK: - Data Refresh
     
-    func clearUserDefaultsData() {
-        // Clear all app-related data
-        let allKeys = defaults.dictionaryRepresentation().keys
-        for key in allKeys {
-            if key.hasPrefix("healthRecords") || 
-               key.hasPrefix("userProfile") || 
-               key.hasPrefix("lastUpdate") ||
-               key.hasPrefix("dailyNotes") {
-                defaults.removeObject(forKey: key)
-            }
-        }
-        defaults.synchronize()
-        
-        // Reset in-memory data
-        self.healthRecords = []
-        self.userProfile = nil
-        self.lastUpdate = Date()
-        
-        print("All UserDefaults data cleared at: \(Date())")
-    }
-    
-    func migrateDataToNewFormat() {
-        clearUserDefaultsData()
-        
-        self.error = .loadFailed(NSError(
-            domain: "com.recordh",
-            code: -1,
-            userInfo: [
-                NSLocalizedDescriptionKey: "数据格式已更新，请重新输入您的信息。",
-                NSLocalizedFailureReasonErrorKey: "修复日期格式问题"
-            ]
-        ))
-    }
-    
-    // MARK: - Health Kit Integration
-    
-    func refreshData() async {
+    internal func refreshAllData() async throws {
         guard !isFetchingData else { return }
-        await refreshAllData()
-    }
-    
-    func setupBackgroundDelivery() {
-        let types = requiredTypes
-        startObservingChanges(for: types) { [weak self] in
-            Task { @MainActor in
-                await self?.refreshData()
-            }
-        }
-    }
-    
-    // MARK: - Records Management
-    
-    func addRecord(_ record: HealthRecord) {
-        if let index = healthRecords.firstIndex(where: { $0.metric == record.metric }) {
-            healthRecords[index] = record
-        } else {
-            healthRecords.append(record)
-        }
-        saveData()
-    }
-    
-    func deleteRecord(_ record: HealthRecord) {
-        healthRecords.removeAll { $0.id == record.id }
-        saveData()
-    }
-    
-    func records(for metric: HealthMetric) -> [HealthRecord] {
-        healthRecords
-            .filter { $0.metric == metric }
-            .sorted { $0.date > $1.date }
-    }
-    
-    func latestRecord(for metric: HealthMetric) -> HealthRecord? {
-        records(for: metric).first
-    }
-    
-    // MARK: - Error Handling
-    
-    func handleError(_ error: Error) {
-        if let healthError = error as? HealthStoreError {
-            self.error = healthError
-        } else {
-            self.error = .fetchFailed(error)
+        setIsFetchingData(true)
+        defer { setIsFetchingData(false) }
+        
+        do {
+            try await ensureAuthorizationWithRetry()
+            try await fetchLatestData()
+            NotificationCenter.default.post(name: .init("HealthDataDidUpdate"), object: nil)
+            setLastUpdate(Date())
+        } catch {
+            authorizeError = error as? HealthStoreError ?? .fetchFailed(error as NSError)
+            throw error
         }
     }
 }

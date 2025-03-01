@@ -51,6 +51,10 @@ struct AIRequestBody: Codable {
     let model: String
     let messages: [AIMessage]
     let temperature: Double
+    let max_tokens: Int
+    let top_p: Double
+    let presence_penalty: Double
+    let frequency_penalty: Double
 }
 
 struct AIMessage: Codable {
@@ -82,7 +86,7 @@ class AIService: ObservableObject {
         request.addValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         
         let requestBody = AIRequestBody(
-            model: "deepseek-chat",
+            model: config.modelName,
             messages: [
                 AIMessage(
                     role: "system",
@@ -96,7 +100,11 @@ class AIService: ObservableObject {
                 ),
                 AIMessage(role: "user", content: prompt)
             ],
-            temperature: 0.7
+            temperature: config.temperature,
+            max_tokens: config.maxTokens,
+            top_p: config.topP,
+            presence_penalty: config.presencePenalty,
+            frequency_penalty: config.frequencyPenalty
         )
         
         let encoder = JSONEncoder()

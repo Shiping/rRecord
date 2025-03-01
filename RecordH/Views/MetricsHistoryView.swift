@@ -32,12 +32,13 @@ private struct Section: View {
     let metric: HealthMetric
     let records: [HealthRecord]
     @Environment(\.theme) var theme
+    @EnvironmentObject var healthStore: HealthStore
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             NavigationLink(destination: SingleMetricHistoryView(
                 metric: metric,
-                metricRecords: records,
+                metricRecords: healthStore.records(for: metric),
                 aiParameters: [:]
             )) {
                 HStack {
@@ -68,7 +69,7 @@ private struct Section: View {
             if records.count > 3 {
                 NavigationLink(destination: SingleMetricHistoryView(
                     metric: metric,
-                    metricRecords: records,
+                    metricRecords: healthStore.records(for: metric),
                     aiParameters: [:]
                 )) {
                     Text("查看全部 \(records.count) 条记录")
@@ -78,7 +79,7 @@ private struct Section: View {
             }
         }
         .padding()
-        .background(theme.secondaryBackgroundColor)
+        .background(theme.cardBackground)
         .cornerRadius(12)
     }
 }

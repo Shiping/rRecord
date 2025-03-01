@@ -175,17 +175,14 @@ struct WelcomeView: View {
         
         Task {
             do {
-                // Create and save user profile first
-                let profile = UserProfile(
-                    gender: gender,
-                    birthday: birthday,
-                    height: height,
-                    location: location.isEmpty ? nil : location
-                )
-                
+                // Update user profile first
                 await MainActor.run {
-                    healthStore.userProfile = profile
-                    healthStore.saveData()
+                    healthStore.updateUserProfile(
+                        gender: gender,
+                        birthday: birthday,
+                        height: height,
+                        location: location.isEmpty ? nil : location
+                    )
                 }
                 
                 // Check HealthKit availability
@@ -194,7 +191,7 @@ struct WelcomeView: View {
                 }
                 
                 // Request HealthKit authorization with retry
-                try await healthStore.ensureAuthorization()
+                try await healthStore.requestAccess()
                 
                 // Refresh initial data
                 await healthStore.refreshData()

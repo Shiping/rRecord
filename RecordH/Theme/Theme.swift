@@ -1,51 +1,51 @@
 import SwiftUI
 
-class Theme: ObservableObject {
-    static let shared = Theme()
+@MainActor
+public final class Theme: ObservableObject {
+    @MainActor
+    public static let shared: Theme = {
+        let instance = Theme()
+        return instance
+    }()
     
-    @Published var accentColor = Color.blue
-    @Published var backgroundColor = Color(UIColor.systemBackground)
-    @Published var secondaryBackgroundColor = Color(UIColor.secondarySystemBackground)
-    @Published var textColor = Color(UIColor.label)
-    @Published var secondaryTextColor = Color(UIColor.secondaryLabel)
+    // MARK: - Colors
+    public let accentColor = Color.blue
+    public let textColor = Color.primary
+    public let secondaryTextColor = Color.secondary
+    public let backgroundColor = Color(UIColor.systemBackground)
+    public let cardBackground = Color(UIColor.secondarySystemBackground)
+    public let goodColor = Color.green
+    public let warningColor = Color.yellow
+    public let badColor = Color.red
+    public let neutralColor = Color.gray
+    public let chartLineColor = Color.blue.opacity(0.6)
+    public let chartGridColor = Color.gray.opacity(0.2)
     
-    // Chart colors
-    @Published var chartLineColor = Color.blue
-    @Published var chartGridColor = Color.gray.opacity(0.2)
-    @Published var chartAxisColor = Color.gray
+    // MARK: - Dimensions
+    public let cornerRadius: CGFloat = 10
+    public let padding: CGFloat = 16
+    public let spacing: CGFloat = 8
     
-    // Status colors
-    @Published var goodColor = Color.green
-    @Published var warningColor = Color.yellow
-    @Published var badColor = Color.red
-    @Published var neutralColor = Color.gray
+    // MARK: - Animations
+    public let defaultAnimation = Animation.easeInOut
+    public let quickAnimation = Animation.easeInOut(duration: 0.2)
     
-    private init() {}
-    
-    func adaptToColorScheme(_ colorScheme: ColorScheme) {
-        backgroundColor = colorScheme == .dark ? Color.black : Color.white
-        secondaryBackgroundColor = colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemGray6)
-        textColor = colorScheme == .dark ? Color.white : Color.black
-        secondaryTextColor = colorScheme == .dark ? Color.gray : Color.gray
-        
-        chartGridColor = colorScheme == .dark ? Color.gray.opacity(0.3) : Color.gray.opacity(0.2)
-        chartAxisColor = colorScheme == .dark ? Color.gray : Color.gray
+    private init() {
+        // Private init for singleton
     }
 }
 
-struct ThemeKey: EnvironmentKey {
-    static let defaultValue = Theme.shared
+// MARK: - Environment Support
+private struct ThemeKey: EnvironmentKey {
+    @MainActor
+    static var defaultValue: Theme {
+        Theme.shared
+    }
 }
 
 extension EnvironmentValues {
-    var theme: Theme {
+    public var theme: Theme {
         get { self[ThemeKey.self] }
         set { self[ThemeKey.self] = newValue }
-    }
-}
-
-extension View {
-    func theme(_ theme: Theme) -> some View {
-        environment(\.theme, theme)
     }
 }

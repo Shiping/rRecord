@@ -1,40 +1,78 @@
 import SwiftUI
+import SafariServices
 
 struct MedicalReferencesView: View {
     @Environment(\.theme) var theme
+    let metric: HealthMetric?
     
-    private var metricsWithReferences: [HealthMetric] {
-        HealthMetric.allCases.filter { 
-            MedicalReferences.references[$0] != nil 
+    var references: [MedicalReference] {
+        if let metric = metric {
+            return MedicalReferences.referencesFor(metric: metric)
         }
+        return MedicalReferences.references
     }
     
     var body: some View {
-        List {
-            Section(header: Text("健康指标参考范围")) {
-                ForEach(metricsWithReferences, id: \.self) { metric in
-                    let reference = MedicalReferences.references[metric]!
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(metric.name)
-                            .font(.headline)
-                            .foregroundColor(theme.accentColor)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("正常范围：\(reference.lowerBound.formatted()) - \(reference.upperBound.formatted()) \(reference.unit)")
-                                .font(.subheadline)
-                                .foregroundColor(theme.textColor)
-                        }
+        List(references) { reference in
+            ReferenceRow(reference: reference)
+        }
+        .navigationTitle("医学参考")
+    }
+}
+
+struct ReferenceRow: View {
+    let reference: MedicalReference
+    @Environment(\.theme) var theme
+    @State private var showingSafariView = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(reference.title)
+                .font(.headline)
+                .foregroundColor(theme.textColor)
+            
+            Text(reference.description)
+                .font(.body)
+                .foregroundColor(theme.secondaryTextColor)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            HStack {
+                Text(reference.source)
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryTextColor)
+                
+                if let url = reference.url {
+                    Spacer()
+                    Button("查看来源") {
+                        showingSafariView = true
                     }
-                    .padding(.vertical, 8)
+                    .font(.caption)
+                    .foregroundColor(theme.accentColor)
                 }
             }
         }
-        .navigationTitle("指标参考")
+        .padding(.vertical, 4)
+        .sheet(isPresented: $showingSafariView) {
+            if let url = reference.url {
+                SafariView(url: url)
+            }
+        }
+    }
+}
+
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+    
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+    
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
     }
 }
 
 #Preview {
-    NavigationView {
-        MedicalReferencesView()
+    NavigationStack {
+        MedicalReferencesView(metric: nil)
     }
 }

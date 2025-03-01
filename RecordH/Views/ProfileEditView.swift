@@ -13,17 +13,11 @@ struct ProfileEditView: View {
     @State private var errorMessage = ""
     
     init() {
-        if let profile = HealthStore.shared.userProfile {
-            _gender = State(initialValue: profile.gender)
-            _birthday = State(initialValue: profile.birthday)
-            _height = State(initialValue: profile.height ?? 170.0)
-            _location = State(initialValue: profile.location ?? "")
-        } else {
-            _gender = State(initialValue: .male)
-            _birthday = State(initialValue: Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date())
-            _height = State(initialValue: 170.0)
-            _location = State(initialValue: "")
-        }
+        // Initialize with default values, will be updated in task
+        _gender = State(initialValue: .other)
+        _birthday = State(initialValue: Date())
+        _height = State(initialValue: 170.0)
+        _location = State(initialValue: "")
     }
     
     var body: some View {
@@ -61,6 +55,13 @@ struct ProfileEditView: View {
         }
         .navigationTitle("修改个人信息")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            let profile = healthStore.userProfile
+            gender = profile.gender
+            birthday = profile.birthday
+            height = profile.height ?? 170.0
+            location = profile.location ?? ""
+        }
         .alert("错误", isPresented: $showingError) {
             Button("确定", role: .cancel) { }
         } message: {
@@ -84,27 +85,29 @@ struct ProfileEditView: View {
             return
         }
         
-        // Create updated profile
-        let profile = UserProfile(
-            id: healthStore.userProfile?.id ?? UUID(),
+        // Update profile using the new updateUserProfile method
+        healthStore.updateUserProfile(
             gender: gender,
             birthday: birthday,
             height: height,
             location: location.isEmpty ? nil : location
         )
         
-        // Save changes
-        healthStore.userProfile = profile
-        healthStore.saveData()
-        
         // Dismiss view
         dismiss()
     }
 }
 
+// Static instance for preview support
+extension HealthStore {
+    static let preview: HealthStore = {
+        HealthStore.shared
+    }()
+}
+
 #Preview {
     NavigationView {
         ProfileEditView()
-            .environmentObject(HealthStore.shared)
+            .environmentObject(HealthStore.preview)
     }
 }

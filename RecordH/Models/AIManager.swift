@@ -1,140 +1,107 @@
 import Foundation
+import Combine
 
 @MainActor
-class AIManager: ObservableObject {
-    static let shared = AIManager()
-    
-    @Published var configs: [AIConfig] = []
-    @Published var templates: [PromptTemplate] = []
-    @Published var currentConfig: AIConfig?
-    
-    private let configsKey = "ai_configs"
-    private let templatesKey = "ai_templates"
-    private let currentConfigKey = "current_ai_config"
-    
-    init() {
-        loadData()
-        
-        // 如果没有配置，创建默认配置
-        if configs.isEmpty {
-            configs = [
-                AIConfig(
-                    name: "默认配置",
-                    model: "gpt-3.5-turbo",
-                    temperature: 0.7,
-                    maxTokens: 500,
-                    systemPrompt: "你是一个专业的健康顾问。",
-                    isDefault: true
-                )
-            ]
-            currentConfig = configs[0]
+public final class AIManager: ObservableObject {
+    @MainActor
+    public static let shared: AIManager = {
+        let instance = AIManager()
+        Task { @MainActor in
+            await instance.initialize()
         }
-        
-        // 如果没有模板，创建默认模板
-        if templates.isEmpty {
-            templates = [
-                PromptTemplate(
-                    name: "基础分析",
-                    description: "基础的健康数据分析模板",
-                    template: """
-                    作为一名专业的健康顾问，请根据以下数据提供分析：
-                    {metrics}
-                    
-                    请提供：
-                    1. 数据趋势分析
-                    2. 是否在正常范围内
-                    3. 改善建议（如果需要）
-                    """,
-                    applicableMetrics: HealthMetric.allCases,
-                    isDefault: true
-                )
-            ]
-        }
-        
-        saveData()
+        return instance
+    }()
+    
+    private let configurationManager: AIConfigurationManager
+    @Published public private(set) var isProcessing = false
+    
+    private init() {
+        self.configurationManager = AIConfigurationManager.shared
     }
     
-    func addConfig(_ config: AIConfig) {
-        configs.append(config)
-        if config.isDefault {
-            setDefaultConfig(config)
-        }
-        saveData()
+    private func initialize() async {
+        // Instance is fully initialized here
     }
     
-    func updateConfig(_ config: AIConfig) {
-        if let index = configs.firstIndex(where: { $0.id == config.id }) {
-            configs[index] = config
-            if config.isDefault {
-                setDefaultConfig(config)
+    public func sendMessage(_ message: String) async throws -> String {
+        guard !isProcessing else {
+            throw AIError.busy
+        }
+        
+        guard let config = configurationManager.getDefaultConfiguration() else {
+            throw AIError.noConfiguration
+        }
+        
+        isProcessing = true
+        defer { isProcessing = false }
+        
+        return try await withURLRequest(for: message, with: config) { request in
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw AIError.invalidResponse
             }
-            saveData()
-        }
-    }
-    
-    func deleteConfig(_ config: AIConfig) {
-        configs.removeAll { $0.id == config.id }
-        saveData()
-    }
-    
-    func setDefaultConfig(_ config: AIConfig) {
-        for i in 0..<configs.count {
-            configs[i].isDefault = configs[i].id == config.id
-        }
-        currentConfig = config
-        saveData()
-    }
-    
-    func addTemplate(_ template: PromptTemplate) {
-        templates.append(template)
-        if template.isDefault {
-            setDefaultTemplate(template)
-        }
-        saveData()
-    }
-    
-    func updateTemplate(_ template: PromptTemplate) {
-        if let index = templates.firstIndex(where: { $0.id == template.id }) {
-            templates[index] = template
-            if template.isDefault {
-                setDefaultTemplate(template)
+            
+            guard httpResponse.statusCode == 200 else {
+                if httpResponse.statusCode == 401 {
+                    throw AIError.unauthorized
+                }
+                throw AIError.serverError(httpResponse.statusCode)
             }
-            saveData()
+            
+            let decodedResponse = try JSONDecoder().decode(AIResponseBody.self, from: data)
+            return decodedResponse.choices.first?.message.content ?? "无分析结果"
         }
     }
     
-    func deleteTemplate(_ template: PromptTemplate) {
-        templates.removeAll { $0.id == template.id }
-        saveData()
-    }
-    
-    func setDefaultTemplate(_ template: PromptTemplate) {
-        for i in 0..<templates.count {
-            templates[i].isDefault = templates[i].id == template.id
-        }
-        saveData()
-    }
-    
-    private func loadData() {
-        if let configsData = UserDefaults.standard.data(forKey: configsKey),
-           let decodedConfigs = try? JSONDecoder().decode([AIConfig].self, from: configsData) {
-            configs = decodedConfigs
-            currentConfig = configs.first { $0.isDefault }
-        }
+    private func withURLRequest<T>(
+        for message: String,
+        with config: AIConfiguration,
+        perform: (URLRequest) async throws -> T
+    ) async throws -> T {
+        let url = config.baseURL.appendingPathComponent("chat/completions")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         
-        if let templatesData = UserDefaults.standard.data(forKey: templatesKey),
-           let decodedTemplates = try? JSONDecoder().decode([PromptTemplate].self, from: templatesData) {
-            templates = decodedTemplates
-        }
-    }
-    
-    private func saveData() {
-        if let encodedConfigs = try? JSONEncoder().encode(configs) {
-            UserDefaults.standard.set(encodedConfigs, forKey: configsKey)
-        }
+        let requestBody = [
+            "model": config.modelName,
+            "messages": [
+                ["role": "user", "content": message]
+            ],
+            "temperature": config.temperature,
+            "max_tokens": config.maxTokens,
+            "top_p": config.topP,
+            "presence_penalty": config.presencePenalty,
+            "frequency_penalty": config.frequencyPenalty
+        ] as [String : Any]
         
-        if let encodedTemplates = try? JSONEncoder().encode(templates) {
-            UserDefaults.standard.set(encodedTemplates, forKey: templatesKey)
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        return try await perform(request)
+    }
+}
+
+public enum AIError: LocalizedError {
+    case noConfiguration
+    case invalidResponse
+    case unauthorized
+    case serverError(Int)
+    case busy
+    
+    public var errorDescription: String? {
+        switch self {
+        case .noConfiguration:
+            return "未配置AI服务"
+        case .invalidResponse:
+            return "服务器响应无效"
+        case .unauthorized:
+            return "API密钥无效或已过期"
+        case .serverError(let code):
+            return "服务器错误（\(code)）"
+        case .busy:
+            return "正在处理其他请求"
         }
     }
 }

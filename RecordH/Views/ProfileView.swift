@@ -14,27 +14,17 @@ struct ProfileView: View {
             Section {
                 Button(action: { showingProfileEdit = true }) {
                     VStack(alignment: .leading, spacing: 8) {
-                        if let profile = healthStore.userProfile {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("个人资料")
-                                        .font(.headline)
-                                    Text("\(profile.gender.rawValue) · \(profile.age)岁")
-                                        .font(.subheadline)
-                                        .foregroundColor(theme.secondaryTextColor)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(theme.secondaryTextColor)
-                            }
-                        } else {
-                            HStack {
-                                Text("设置个人资料")
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("个人资料")
                                     .font(.headline)
-                                Spacer()
-                                Image(systemName: "chevron.right")
+                                Text("\(healthStore.userProfile.gender.rawValue) · \(healthStore.userProfile.age)岁")
+                                    .font(.subheadline)
                                     .foregroundColor(theme.secondaryTextColor)
                             }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(theme.secondaryTextColor)
                         }
                     }
                 }
@@ -70,7 +60,7 @@ struct ProfileView: View {
                     }
                 }
                 
-                NavigationLink(destination: MedicalReferencesView()) {
+                NavigationLink(destination: MedicalReferencesView( metric: <#HealthMetric?#>)) {
                     HStack {
                         Image(systemName: "cross.case")
                         Text("医学参考")

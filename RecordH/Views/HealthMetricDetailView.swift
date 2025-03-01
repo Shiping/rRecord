@@ -7,9 +7,7 @@ struct HealthMetricDetailView: View {
     @Environment(\.theme) var theme
     
     private var filteredRecords: [HealthRecord] {
-        healthStore.healthRecords
-            .filter { $0.metric == metric }
-            .sorted { $0.date > $1.date }
+        healthStore.records(for: metric)
     }
     
     var body: some View {

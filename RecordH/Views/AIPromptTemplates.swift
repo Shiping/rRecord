@@ -49,7 +49,7 @@ struct AIPromptTemplates: View {
                                         .font(.caption)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(theme.secondaryBackgroundColor)
+                                        .background(theme.cardBackground)
                                         .cornerRadius(8)
                                 }
                             }

@@ -13,9 +13,10 @@ struct SingleMetricHistoryView: View {
     let metricRecords: [HealthRecord]
     let aiParameters: [String: String]
     @Environment(\.theme) var theme
-    @EnvironmentObject var healthStore: HealthStore // Add this line
+    @EnvironmentObject var healthStore: HealthStore
     @State private var selectedPeriod: TimePeriod = .week
     @State private var showingAddRecord = false
+    @State private var showingAIConfig = false
     @Environment(\.dismiss) private var dismiss
     @State private var isRefreshing = false
     
@@ -102,7 +103,7 @@ struct SingleMetricHistoryView: View {
                             Text("AI分析")
                                 .font(.headline)
                             Spacer()
-                            NavigationLink(destination: AIConfigView()) {
+                            Button(action: { showingAIConfig = true }) {
                                 Image(systemName: "gearshape")
                                     .foregroundColor(theme.secondaryTextColor)
                             }
@@ -112,6 +113,8 @@ struct SingleMetricHistoryView: View {
                             parameters: aiParameters,
                             contextDescription: "这是\(metric.name)的历史数据分析，共\(metricRecords.count)条记录"
                         )
+                        .environmentObject(healthStore.configManager)
+                        .environmentObject(healthStore.aiManager)
                     }
                     .padding()
                     .background(theme.secondaryBackgroundColor)
@@ -136,6 +139,13 @@ struct SingleMetricHistoryView: View {
         .sheet(isPresented: $showingAddRecord) {
             AddRecordSheet(metric: metric)
                 .environmentObject(healthStore)
+        }
+        .sheet(isPresented: $showingAIConfig) {
+            NavigationStack {
+                AIConfigList()
+                    .environmentObject(healthStore.configManager)
+                    .environmentObject(healthStore.aiManager)
+            }
         }
     }
     
@@ -182,7 +192,7 @@ struct LineChartView: View {
                     let range = maxY - minY
                     
                     let step = geometry.size.width / CGFloat(records.count - 1)
-                    let scale = geometry.size.height / CGFloat(range)
+                    let scale = geometry.size.height - CGFloat(range)
                     
                     var x: CGFloat = 0
                     

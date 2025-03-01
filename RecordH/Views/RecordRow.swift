@@ -28,7 +28,7 @@ struct RecordRow: View {
                 Text(String(format: "%.1f", record.value))
                     .font(.title2)
                     .foregroundColor(theme.accentColor)
-                Text(record.metric.unit)
+                Text(record.metric.unitString)
                     .font(.caption)
                     .foregroundColor(theme.secondaryTextColor)
             }

@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import UIKit
 
 struct AddRecordSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -71,15 +72,19 @@ struct AddRecordSheet: View {
             return
         }
         
-        let record = HealthRecord(
-            id: UUID(),
-            metric: metric,
-            value: value,
-            date: date
-        )
-        
-        healthStore.addRecord(record)
-        dismiss()
+        Task {
+            do {
+                try await healthStore.save(value: value, for: metric, date: date)
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showingError = true
+                }
+            }
+        }
     }
 }
 

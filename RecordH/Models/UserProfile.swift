@@ -1,24 +1,24 @@
 import Foundation
 
-enum Gender: String, Codable {
+public enum Gender: String, Codable {
     case male = "男"
     case female = "女"
     case other = "其他"
 }
 
-struct UserProfile: Codable {
-    var id: UUID
-    var gender: Gender
-    var birthday: Date
-    var height: Double?
-    var location: String?
-    var lastUpdated: Date
+public struct UserProfile: Codable {
+    public let id: UUID
+    public var gender: Gender
+    public var birthday: Date
+    public var height: Double?
+    public var location: String?
+    public var lastUpdated: Date
     
     enum CodingKeys: String, CodingKey {
         case id, gender, birthday, height, location, lastUpdated
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         // First decode non-date properties
@@ -65,7 +65,7 @@ struct UserProfile: Codable {
         lastUpdated = decodedLastUpdated
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(gender, forKey: .gender)
@@ -77,7 +77,7 @@ struct UserProfile: Codable {
         try container.encode(lastUpdated.timeIntervalSince1970, forKey: .lastUpdated)
     }
     
-    init(id: UUID = UUID(), 
+    public init(id: UUID = UUID(), 
          gender: Gender, 
          birthday: Date, 
          height: Double? = nil,
@@ -91,13 +91,13 @@ struct UserProfile: Codable {
         self.lastUpdated = lastUpdated
     }
     
-    var age: Int {
+    public var age: Int {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year], from: birthday, to: Date())
         return components.year ?? 0
     }
     
-    mutating func update(gender: Gender? = nil, 
+    public mutating func update(gender: Gender? = nil, 
                         birthday: Date? = nil, 
                         height: Double? = nil,
                         location: String? = nil) {
@@ -118,7 +118,7 @@ struct UserProfile: Codable {
 }
 
 extension UserProfile {
-    static var sample: UserProfile {
+    public static var sample: UserProfile {
         UserProfile(
             gender: .male,
             birthday: Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date(),

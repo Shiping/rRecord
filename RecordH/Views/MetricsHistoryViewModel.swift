@@ -27,16 +27,12 @@ class MetricsHistoryViewModel: ObservableObject {
         guard let healthStore = healthStore else { return }
         
         // Group records by metric type
-        let records = healthStore.healthRecords
         var grouped: [HealthMetric: [HealthRecord]] = [:]
         
         for metric in HealthMetric.allCases {
-            let metricRecords = records
-                .filter { $0.metric == metric }
-                .sorted { $0.date > $1.date }
-            
-            if !metricRecords.isEmpty {
-                grouped[metric] = metricRecords
+            let records = healthStore.records(for: metric)
+            if !records.isEmpty {
+                grouped[metric] = records
             }
         }
         

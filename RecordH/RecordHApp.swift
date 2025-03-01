@@ -3,54 +3,59 @@ import HealthKit
 
 @main
 struct RecordHApp: App {
-    @StateObject private var healthStore = HealthStore.shared
-    @StateObject private var theme = Theme.shared
-    @StateObject private var aiManager = AIManager.shared
-    @Environment(\.scenePhase) private var scenePhase
+    @State private var theme: Theme?
+    @State private var healthStore: HealthStore?
+    @State private var aiManager: AIManager?
+    @State private var configManager: AIConfigurationManager?
+    
     @State private var showingWelcome = false
     @State private var isInitializing = true
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if isInitializing {
+            Group {
+                if isInitializing || theme == nil {
                     ProgressView("初始化中...")
                         .progressViewStyle(CircularProgressViewStyle())
                 } else if showingWelcome {
                     WelcomeView(isPresented: $showingWelcome)
-                        .environmentObject(healthStore)
-                        .environment(\.theme, theme)
+                        .environmentObject(healthStore!)
+                        .environment(\.theme, theme!)
+                        .environmentObject(configManager!)
                 } else {
                     NavigationStack {
                         DashboardView()
-                            .environmentObject(healthStore)
-                            .environment(\.theme, theme)
-                            .environmentObject(aiManager)
+                            .environmentObject(healthStore!)
+                            .environment(\.theme, theme!)
+                            .environmentObject(configManager!)
+                            .environmentObject(aiManager!)
                     }
+                }
+            }
+            .task {
+                // Initialize managers if not already done
+                if theme == nil || healthStore == nil || configManager == nil || aiManager == nil {
+                    await initializeManagers()
                 }
             }
             .onAppear {
                 checkFirstLaunch()
-                Task {
-                    await initializeApp()
-                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 Task {
-                    do {
-                        switch newPhase {
-                        case .active:
-                            if !isInitializing {
-                                try await healthStore.ensureAuthorization()
+                    switch newPhase {
+                    case .active:
+                        if !isInitializing, let healthStore = healthStore {
+                            let hasPermission = await requestAccess(healthStore)
+                            if hasPermission {
                                 await healthStore.refreshData()
                             }
-                        case .background:
-                            healthStore.saveData()
-                        default:
-                            break
                         }
-                    } catch {
-                        print("Scene phase change error: \(error)")
+                    case .background:
+                        break
+                    default:
+                        break
                     }
                 }
             }
@@ -65,15 +70,26 @@ struct RecordHApp: App {
         }
     }
     
-    private func initializeApp() async {
+    private func initializeManagers() async {
+        // Initialize managers in dependency order
+        theme = Theme.shared
+        configManager = AIConfigurationManager.shared
+        aiManager = AIManager.shared
+        healthStore = HealthStore.shared
+        
+        if HKHealthStore.isHealthDataAvailable(), let healthStore = healthStore {
+            _ = await requestAccess(healthStore)
+        }
+        
+        isInitializing = false
+    }
+    
+    private func requestAccess(_ healthStore: HealthStore) async -> Bool {
         do {
-            if HKHealthStore.isHealthDataAvailable() {
-                try await healthStore.ensureAuthorization()
-            }
-            isInitializing = false
+            return try await healthStore.requestAccess()
         } catch {
-            print("Initialization error: \(error)")
-            isInitializing = false
+            print("Health access request failed: \(error)")
+            return false
         }
     }
 }

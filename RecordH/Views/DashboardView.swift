@@ -95,7 +95,7 @@ struct DashboardView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 // Profile Section
-                Button(action: { navigationPath.append(NavigationDestination.profile) }) {
+                NavigationLink(value: NavigationDestination.profile) {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("个人设置")
@@ -117,7 +117,7 @@ struct DashboardView: View {
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.secondarySystemBackground)))
+                        .fill(theme.cardBackground))
                 }
                 .padding(.horizontal)
                 
@@ -135,9 +135,7 @@ struct DashboardView: View {
                             Text("AI分析")
                                 .font(.headline)
                             Spacer()
-                            Button(action: {
-                                navigationPath.append(NavigationDestination.aiConfig)
-                            }) {
+                            NavigationLink(value: NavigationDestination.aiConfig) {
                                 Image(systemName: "gearshape")
                                     .foregroundColor(.secondary)
                             }
@@ -171,7 +169,9 @@ struct DashboardView: View {
                     aiParameters: healthParameters
                 )
             case .aiConfig:
-                AIConfigView()
+                AIConfigList()
+                    .environmentObject(healthStore.configManager)
+                    .environmentObject(healthStore.aiManager)
             }
         }
         .refreshable {
@@ -180,9 +180,7 @@ struct DashboardView: View {
         .navigationTitle("健康概览")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    navigationPath.append(NavigationDestination.profile)
-                }) {
+                NavigationLink(value: NavigationDestination.profile) {
                     HStack {
                         Image(systemName: "person.circle")
                         Text("个人设置")
@@ -212,6 +210,8 @@ struct DashboardView: View {
                     parameters: healthParameters,
                     contextDescription: "这是用户的最新健康指标数据"
                 )
+                .environmentObject(healthStore.configManager)
+                .environmentObject(healthStore.aiManager)
                 .navigationTitle("AI健康分析")
                 .navigationBarTitleDisplayMode(.inline)
             }
@@ -234,8 +234,10 @@ struct DashboardView: View {
                 }
             }
         } message: {
-            if let error = healthStore.error {
-                Text("\(error.localizedDescription)\n\n\(error.advice)")
+            if let healthError = healthStore.error as? HealthStoreError {
+                Text("\(healthError.localizedDescription)\n\n\(healthError.advice)")
+            } else if let error = healthStore.error {
+                Text(error.localizedDescription)
             }
         }
         .alert("确认清除数据", isPresented: $showingClearDataAlert) {

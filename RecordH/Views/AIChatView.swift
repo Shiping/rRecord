@@ -4,12 +4,14 @@ struct AIChatView: View {
     let parameters: [String: String]
     let contextDescription: String
     
-    @StateObject private var configManager = AIConfigurationManager()
+    @EnvironmentObject private var configManager: AIConfigurationManager
+    @EnvironmentObject private var aiManager: AIManager
     @State private var userInput = ""
     @State private var isLoading = false
     @State private var response: AIResponse?
     @State private var error: Error?
     @State private var showError = false
+    @State private var showingSettings = false
     
     private var combinedPrompt: String {
         var prompt = "基于以下数据进行分析：\n"
@@ -74,6 +76,23 @@ struct AIChatView: View {
             }
             .padding(.horizontal)
         }
+        .navigationTitle("AI助手")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gear")
+                }
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                AIConfigList()
+                    .environmentObject(configManager)
+                    .environmentObject(aiManager)
+            }
+        }
         .alert("错误", isPresented: $showError) {
             Button("确定", role: .cancel) {}
         } message: {
@@ -91,28 +110,25 @@ struct AIChatView: View {
     }
     
     private func generateResponse() async {
-        guard let config = configManager.getDefaultConfiguration() else {
-            error = NSError(
-                domain: "AIChat",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "请先在设置中配置AI"]
-            )
-            showError = true
-            return
-        }
-        
         isLoading = true
         defer { isLoading = false }
         
         do {
-            let newResponse = try await AIService.shared.generateResponse(
-                config: config,
-                prompt: combinedPrompt,
-                parameters: parameterNames
-            )
-            
+            let content = try await aiManager.sendMessage(combinedPrompt)
             await MainActor.run {
-                response = newResponse
+                response = AIResponse(
+                    content: content,
+                    usedParameters: parameterNames
+                )
+            }
+        } catch AIError.noConfiguration {
+            await MainActor.run {
+                error = NSError(
+                    domain: "AIChat",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "请先在设置中配置AI"]
+                )
+                showError = true
             }
         } catch {
             await MainActor.run {
@@ -136,10 +152,13 @@ struct AIChatView_Previews: PreviewProvider {
     static var previewContext = "这是最近30天的健康数据概览"
     
     static var previews: some View {
-        AIChatView(
-            parameters: previewParameters,
-            contextDescription: previewContext
-        )
-        .padding()
+        NavigationStack {
+            AIChatView(
+                parameters: previewParameters,
+                contextDescription: previewContext
+            )
+            .environmentObject(AIConfigurationManager.shared)
+            .environmentObject(AIManager.shared)
+        }
     }
 }

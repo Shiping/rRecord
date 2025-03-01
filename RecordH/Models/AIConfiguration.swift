@@ -1,84 +1,48 @@
 import Foundation
 
-struct AIConfiguration: Codable, Identifiable, Equatable {
-    let id: UUID
-    var name: String
-    var baseURL: URL
-    var apiKey: String
-    var isDefault: Bool
+public struct AIConfiguration: Codable, Identifiable {
+    public let id: UUID
+    public var name: String
+    public var baseURL: URL
+    public var apiKey: String
+    public var isDefault: Bool
+    public var modelName: String
+    public var temperature: Double
+    public var maxTokens: Int
+    public var topP: Double
+    public var presencePenalty: Double
+    public var frequencyPenalty: Double
     
-    init(id: UUID = UUID(), name: String, baseURL: URL, apiKey: String, isDefault: Bool = false) {
+    public init(id: UUID = UUID(), 
+                name: String,
+                baseURL: URL, 
+                apiKey: String,
+                isDefault: Bool = false,
+                modelName: String = "deepseek-chat",
+                temperature: Double = 0.7,
+                maxTokens: Int = 2000,
+                topP: Double = 0.95,
+                presencePenalty: Double = 0.0,
+                frequencyPenalty: Double = 0.0) {
         self.id = id
         self.name = name
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.isDefault = isDefault
+        self.modelName = modelName
+        self.temperature = temperature
+        self.maxTokens = maxTokens
+        self.topP = topP
+        self.presencePenalty = presencePenalty
+        self.frequencyPenalty = frequencyPenalty
     }
     
-    static var deepseekDefault: AIConfiguration {
+    public static var deepseekDefault: Self {
         AIConfiguration(
-            name: "Deepseek",
-            baseURL: URL(string: "https://api.deepseek.com/v1/")!,
+            name: "Deepseek Chat",
+            baseURL: URL(string: "https://api.deepseek.com/v1")!,
             apiKey: "",
             isDefault: true
         )
-    }
-}
-
-// MARK: - Configuration Storage
-class AIConfigurationManager: ObservableObject {
-    @Published var configurations: [AIConfiguration] = []
-    private let defaults = UserDefaults.standard
-    private let configKey = "ai_configurations"
-    
-    init() {
-        loadConfigurations()
-    }
-    
-    private func loadConfigurations() {
-        if let data = defaults.data(forKey: configKey),
-           let configs = try? JSONDecoder().decode([AIConfiguration].self, from: data) {
-            configurations = configs
-        } else {
-            // Initialize with default configuration
-            configurations = [.deepseekDefault]
-            saveConfigurations()
-        }
-    }
-    
-    private func saveConfigurations() {
-        if let data = try? JSONEncoder().encode(configurations) {
-            defaults.set(data, forKey: configKey)
-        }
-    }
-    
-    func addConfiguration(_ config: AIConfiguration) {
-        configurations.append(config)
-        saveConfigurations()
-    }
-    
-    func updateConfiguration(_ config: AIConfiguration) {
-        if let index = configurations.firstIndex(where: { $0.id == config.id }) {
-            configurations[index] = config
-            saveConfigurations()
-        }
-    }
-    
-    func deleteConfiguration(_ config: AIConfiguration) {
-        configurations.removeAll { $0.id == config.id }
-        saveConfigurations()
-    }
-    
-    func getDefaultConfiguration() -> AIConfiguration? {
-        configurations.first { $0.isDefault }
-    }
-    
-    func setDefaultConfiguration(_ config: AIConfiguration) {
-        var updatedConfigs = configurations
-        for i in 0..<updatedConfigs.count {
-            updatedConfigs[i].isDefault = (updatedConfigs[i].id == config.id)
-        }
-        configurations = updatedConfigs
-        saveConfigurations()
     }
 }

@@ -1,24 +1,14 @@
 import SwiftUI
 
-struct AIConfig: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var model: String
-    var temperature: Double
-    var maxTokens: Int
-    var systemPrompt: String
-    var isDefault: Bool
-}
-
 struct AIConfigList: View {
-    @EnvironmentObject private var aiManager: AIManager
+    @EnvironmentObject private var configManager: AIConfigurationManager
     @State private var showingAddConfig = false
-    @State private var showingEditConfig: AIConfig?
+    @State private var showingEditConfig: AIConfiguration?
     @Environment(\.theme) var theme
     
     var body: some View {
         List {
-            ForEach(aiManager.configs) { config in
+            ForEach(configManager.configurations) { config in
                 Button(action: {
                     showingEditConfig = config
                 }) {
@@ -36,8 +26,11 @@ struct AIConfigList: View {
                                         .cornerRadius(4)
                                 }
                             }
-                            Text(config.model)
+                            Text(AIConfigEditor.commonModels[config.modelName] ?? config.modelName)
                                 .font(.subheadline)
+                                .foregroundColor(theme.secondaryTextColor)
+                            Text(config.baseURL.absoluteString)
+                                .font(.caption)
                                 .foregroundColor(theme.secondaryTextColor)
                         }
                         Spacer()
@@ -58,15 +51,8 @@ struct AIConfigList: View {
         }
         .sheet(isPresented: $showingAddConfig) {
             NavigationView {
-                AIConfigEditor(config: AIConfig(
-                    name: "",
-                    model: "gpt-3.5-turbo",
-                    temperature: 0.7,
-                    maxTokens: 500,
-                    systemPrompt: "",
-                    isDefault: false
-                ), onSave: { config in
-                    aiManager.addConfig(config)
+                AIConfigEditor(config: .deepseekDefault, onSave: { config in
+                    configManager.addConfiguration(config)
                     showingAddConfig = false
                 })
             }
@@ -74,7 +60,7 @@ struct AIConfigList: View {
         .sheet(item: $showingEditConfig) { config in
             NavigationView {
                 AIConfigEditor(config: config, onSave: { updatedConfig in
-                    aiManager.updateConfig(updatedConfig)
+                    configManager.updateConfiguration(updatedConfig)
                     showingEditConfig = nil
                 })
             }
@@ -83,48 +69,121 @@ struct AIConfigList: View {
     
     private func deleteConfigs(at offsets: IndexSet) {
         for index in offsets {
-            let config = aiManager.configs[index]
-            aiManager.deleteConfig(config)
+            let config = configManager.configurations[index]
+            if !config.isDefault {
+                configManager.deleteConfiguration(config)
+            }
         }
     }
 }
 
 struct AIConfigEditor: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var config: AIConfig
-    let onSave: (AIConfig) -> Void
+    @Environment(\.theme) var theme
+    @State private var editableConfig: AIConfiguration
+    let originalConfig: AIConfiguration
+    let onSave: (AIConfiguration) -> Void
     
-    init(config: AIConfig, onSave: @escaping (AIConfig) -> Void) {
-        _config = State(initialValue: config)
+    static let commonModels = [
+        "deepseek-chat": "Deepseek Chat",
+        "gpt-4": "GPT-4",
+        "gpt-3.5-turbo": "GPT-3.5 Turbo",
+        "claude-2": "Claude 2",
+        "gemini-pro": "Gemini Pro"
+    ]
+    
+    init(config: AIConfiguration, onSave: @escaping (AIConfiguration) -> Void) {
+        self.originalConfig = config
+        _editableConfig = State(initialValue: config)
         self.onSave = onSave
     }
     
     var body: some View {
         Form {
-            Section(header: Text("基本设置")) {
-                TextField("配置名称", text: $config.name)
-                Picker("模型", selection: $config.model) {
-                    Text("GPT-3.5").tag("gpt-3.5-turbo")
-                    Text("GPT-4").tag("gpt-4")
-                }
-                Toggle("设为默认", isOn: $config.isDefault)
-            }
-            
-            Section(header: Text("模型参数")) {
-                VStack(alignment: .leading) {
-                    Text("Temperature: \(config.temperature, specifier: "%.1f")")
-                    Slider(value: $config.temperature, in: 0...1)
+            Section(header: Text("基本设置"), footer: Text("为AI配置设置基本参数，包括名称、服务地址和访问密钥")) {
+                TextField("配置名称", text: $editableConfig.name)
+                TextField("Base URL", text: Binding(
+                    get: { editableConfig.baseURL.absoluteString },
+                    set: { if let url = URL(string: $0) { editableConfig.baseURL = url } }
+                ))
+                .keyboardType(.URL)
+                .autocapitalization(.none)
+                SecureField("API Key", text: $editableConfig.apiKey)
+                
+                Picker("模型", selection: $editableConfig.modelName) {
+                    ForEach(Array(Self.commonModels.keys), id: \.self) { key in
+                        Text(Self.commonModels[key] ?? key)
+                            .tag(key)
+                    }
+                    if !Self.commonModels.keys.contains(editableConfig.modelName) {
+                        Text(editableConfig.modelName)
+                            .tag(editableConfig.modelName)
+                    }
                 }
                 
-                Stepper("最大Token: \(config.maxTokens)", value: $config.maxTokens, in: 100...2000, step: 100)
+                if !Self.commonModels.keys.contains(editableConfig.modelName) {
+                    TextField("自定义模型名称", text: $editableConfig.modelName)
+                        .autocapitalization(.none)
+                }
+                
+                if !editableConfig.isDefault {
+                    Toggle("设为默认", isOn: $editableConfig.isDefault)
+                }
             }
             
-            Section(header: Text("系统提示词")) {
-                TextEditor(text: $config.systemPrompt)
-                    .frame(height: 100)
+            Section(header: Text("模型参数"), footer: Text("调整AI模型的参数以控制输出的创造性和质量")) {
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Temperature")
+                        Spacer()
+                        Text(String(format: "%.2f", editableConfig.temperature))
+                    }
+                    Slider(value: $editableConfig.temperature, in: 0...2)
+                }
+                .help("控制输出的随机性：较高的值使输出更有创意，较低的值使输出更确定")
+                
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("最大Tokens")
+                        Spacer()
+                        Text("\(editableConfig.maxTokens)")
+                    }
+                    Stepper("", value: $editableConfig.maxTokens, in: 100...8000, step: 100)
+                }
+                .help("限制AI响应的最大长度")
+                
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Top P")
+                        Spacer()
+                        Text(String(format: "%.2f", editableConfig.topP))
+                    }
+                    Slider(value: $editableConfig.topP, in: 0...1)
+                }
+                .help("控制输出的多样性：数值越高，生成的文本越多样化")
+                
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Presence Penalty")
+                        Spacer()
+                        Text(String(format: "%.2f", editableConfig.presencePenalty))
+                    }
+                    Slider(value: $editableConfig.presencePenalty, in: -2...2)
+                }
+                .help("增加模型谈论新话题的可能性")
+                
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Frequency Penalty")
+                        Spacer()
+                        Text(String(format: "%.2f", editableConfig.frequencyPenalty))
+                    }
+                    Slider(value: $editableConfig.frequencyPenalty, in: -2...2)
+                }
+                .help("降低模型重复使用相同表达的可能性")
             }
         }
-        .navigationTitle(config.name.isEmpty ? "新建配置" : config.name)
+        .navigationTitle(editableConfig.name.isEmpty ? "新建配置" : editableConfig.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -134,10 +193,10 @@ struct AIConfigEditor: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("保存") {
-                    onSave(config)
+                    onSave(editableConfig)
                     dismiss()
                 }
-                .disabled(config.name.isEmpty)
+                .disabled(editableConfig.name.isEmpty || editableConfig.apiKey.isEmpty)
             }
         }
     }
@@ -146,6 +205,6 @@ struct AIConfigEditor: View {
 #Preview {
     NavigationView {
         AIConfigList()
-            .environmentObject(AIManager.shared)
+            .environmentObject(AIConfigurationManager.shared)
     }
 }
