@@ -1,140 +1,41 @@
 import SwiftUI
 
-struct MetricSelectionSheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Binding var selectedMetric: HealthMetric?
-    
-    var body: some View {
-        NavigationView {
-            List(HealthMetric.allCases, id: \.self) { metric in
-                Button(action: {
-                    selectedMetric = metric
-                    dismiss()
-                }) {
-                    Text(metric.name)
-                }
-            }
-            .navigationTitle("选择指标")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
+enum NavigationDestination: Hashable {
+    case profile
+    case metric(HealthMetric)
+    case aiConfig
 }
 
 struct DashboardView: View {
-    @EnvironmentObject var healthStore: HealthStore
-    @Environment(\.theme) var theme
-    @State private var showingMetricSelection = false
-    @State private var showingAddRecord = false
-    @State private var selectedMetric: HealthMetric?
-    @State private var showingErrorAlert = false
-    @State private var showingClearDataAlert = false
-    @State private var showingAIChat = false
-    
-    enum NavigationDestination: Hashable {
-        case profile
-        case metric(HealthMetric)
-        case aiConfig
-        
-        static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
-            switch (lhs, rhs) {
-            case (.profile, .profile):
-                return true
-            case (.aiConfig, .aiConfig):
-                return true
-            case let (.metric(m1), .metric(m2)):
-                return m1 == m2
-            default:
-                return false
-            }
-        }
-        
-        func hash(into hasher: inout Hasher) {
-            switch self {
-            case .profile:
-                hasher.combine(0)
-            case .aiConfig:
-                hasher.combine(1)
-            case .metric(let metric):
-                hasher.combine(2)
-                hasher.combine(metric)
-            }
-        }
+    private var profileSection: some View {
+        ProfileView()
     }
     
-    @State private var navigationPath = NavigationPath()
+    private var metricsGrid: some View {
+        MetricsGridView()
+            .environmentObject(healthStore)
+    }
+    
+    private var aiAnalysisSection: some View {
+        AIChatView(
+            parameters: healthParameters,
+            contextDescription: "这是用户的最新健康指标数据"
+        )
+        .environmentObject(healthStore.configManager)
+        .environmentObject(healthStore.aiManager)
+    }
     
     private var healthParameters: [String: String] {
-        var params: [String: String] = [:]
-        
-        // Add user profile data
-        if let profile = healthStore.userProfile {
-            params["性别"] = profile.gender.rawValue
-            params["年龄"] = "\(profile.age)岁"
-            if let location = profile.location {
-                params["所在地"] = location
-            }
-        }
-        
-        // Add health metrics
-        for metric in HealthMetric.allCases {
-            if let record = healthStore.latestRecord(for: metric) {
-                params[metric.name] = record.formattedValue
-            }
-        }
-        
-        return params
+        healthStore.currentHealthParameters
     }
+    @EnvironmentObject var healthStore: HealthStore
+    @State private var showingMetricSelection = false
+    @State private var selectedMetric: HealthMetric?
+    @State private var showingAIChat = false
+    @State private var showingClearDataAlert = false
     
     var body: some View {
-        let profileSection = NavigationLink(value: NavigationDestination.profile) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("个人设置")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                            if healthStore.userProfile != nil {
-                                Text("\(healthStore.userProfile?.gender.rawValue ?? "") · \(healthStore.userProfile?.age ?? 0)岁")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                    } else {
-                        Text("点击设置个人信息")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 12)
-                .fill(theme.cardBackground))
-        }
-        .padding(.horizontal)
-        
-        let metricsGrid = LatestMetricsGrid(
-            navigationPath: $navigationPath,
-            aiParameters: healthParameters
-        )
-        .environmentObject(healthStore)
-        
-        let aiAnalysisSection = VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("AI分析")
-                    .font(.headline)
-                Spacer()
-                NavigationLink(value: NavigationDestination.aiConfig) {
-                    Image(systemName: "gearshape")
-                        .foregroundColor(.secondary)
-                }
-            }
-            
+        VStack {
             Button(action: {
                 showingAIChat = true
             }) {
@@ -146,23 +47,23 @@ struct DashboardView: View {
                         .foregroundColor(.secondary)
                 }
             }
-        }
-        .padding(.horizontal)
-        
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                // Profile Section
-                profileSection
-                
-                // Metrics Grid
-                metricsGrid
-                
-                // AI Analysis Section
-                if !healthParameters.isEmpty {
-                    aiAnalysisSection
+            .padding(.horizontal)
+            
+            ScrollView {
+                LazyVStack(spacing: 20) {
+                    // Profile Section
+                    profileSection
+                    
+                    // Metrics Grid
+                    metricsGrid
+                    
+                    // AI Analysis Section
+                    if !healthParameters.isEmpty {
+                        aiAnalysisSection
+                    }
                 }
+                .padding(.vertical)
             }
-            .padding(.vertical)
         }
         .navigationDestination(for: NavigationDestination.self) { destination in
             switch destination {
@@ -226,12 +127,12 @@ struct DashboardView: View {
             get: { healthStore.error != nil },
             set: { show in
                 if !show {
-                    healthStore.error = nil
+                    HealthStore.shared.clearError()
                 }
             }
         )) {
             Button("确定", role: .cancel) {
-                healthStore.error = nil
+                HealthStore.shared.clearError()
             }
             
             if healthStore.error?.localizedDescription.contains("数据加载失败") == true {
@@ -253,7 +154,7 @@ struct DashboardView: View {
             Button("确定清除", role: .destructive) {
                 healthStore.clearUserDefaultsData()
                 showingClearDataAlert = false
-                healthStore.error = nil // Clear error state
+                healthStore.clearError()
                 
                 // Force a refresh after clearing data
                 Task {
@@ -262,6 +163,32 @@ struct DashboardView: View {
             }
         } message: {
             Text("此操作将清除所有本地保存的数据。这可能有助于解决数据加载问题，但会删除所有已保存的记录。您确定要继续吗？")
+        }
+    }
+}
+
+struct MetricSelectionSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @Binding var selectedMetric: HealthMetric?
+    
+    var body: some View {
+        NavigationView {
+            List(HealthMetric.allCases, id: \.self) { metric in
+                Button(action: {
+                    selectedMetric = metric
+                    dismiss()
+                }) {
+                    Text(metric.name)
+                }
+            }
+            .navigationTitle("选择指标")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }

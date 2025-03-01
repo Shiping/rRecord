@@ -24,7 +24,7 @@ struct MinimalTrendLine: View {
     }
 }
 
-private struct TrendPath: Shape {
+private struct TrendPath: Shape, @unchecked Sendable {
     let records: [HealthRecord]
     
     func path(in rect: CGRect) -> Path {

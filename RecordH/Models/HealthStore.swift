@@ -23,6 +23,10 @@ public final class HealthStore: ObservableObject {
     @Published private(set) var isFetchingData = false
     @Published private(set) var lastUpdate: Date?
     @Published private(set) var error: Error?
+    
+    public func clearError() {
+        error = nil
+    }
     @Published public var userProfile = UserProfile.sample
     var hasPermission = false
 
@@ -308,6 +312,16 @@ public final class HealthStore: ObservableObject {
     
     public func latestRecord(for metric: HealthMetric) -> HealthRecord? {
         return records(for: metric).first
+    }
+    
+    var currentHealthParameters: [String: String] {
+        var params: [String: String] = [:]
+        for metric in supportedMetrics {
+            if let record = latestRecord(for: metric) {
+                params[metric.name] = String(format: "%.1f", record.value)
+            }
+        }
+        return params
     }
     
     internal func updateRecord(_ record: HealthRecord) {
