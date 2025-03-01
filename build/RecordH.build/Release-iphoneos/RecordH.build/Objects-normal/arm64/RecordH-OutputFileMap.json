@@ -1,0 +1,250 @@
+{
+  "" : {
+    "const-values" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.swiftconstvalues",
+    "dependencies" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.d",
+    "diagnostics" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.dia",
+    "emit-module-dependencies" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master-emit-module.dia",
+    "swift-dependencies" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.swiftdeps"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/ContentView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/AIConfiguration.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfiguration.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfiguration.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfiguration.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/AIConfigurationManager.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigurationManager.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigurationManager.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigurationManager.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/AIManager.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIManager.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIManager.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIManager.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/AIResponse.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIResponse.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIResponse.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIResponse.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/DailyNote.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DailyNote.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DailyNote.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DailyNote.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/DateFormatter+Extension.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DateFormatter+Extension.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DateFormatter+Extension.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DateFormatter+Extension.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthMetric.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetric.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetric.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetric.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthRecord.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthRecord.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthRecord.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthRecord.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthStore.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStore.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStore.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStore.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthStoreAuth.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreAuth.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreAuth.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreAuth.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthStoreError.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreError.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreError.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreError.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthStoreRefresh.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreRefresh.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreRefresh.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreRefresh.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/HealthStoreState.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreState.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreState.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthStoreState.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/MedicalReferences.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferences.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferences.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferences.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/PromptTemplate.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/PromptTemplate.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/PromptTemplate.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/PromptTemplate.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Models/UserProfile.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/UserProfile.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/UserProfile.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/UserProfile.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/RecordHApp.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordHApp.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordHApp.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordHApp.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Theme/Theme.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/Theme.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Theme/ThemeManager.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ThemeManager.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ThemeManager.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ThemeManager.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AIChatView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIChatView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIChatView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIChatView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AIConfigList.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigList.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigList.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIConfigList.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AIPromptTemplates.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIPromptTemplates.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIPromptTemplates.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AIPromptTemplates.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AddNoteView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddNoteView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddNoteView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddNoteView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AddRecordSheet.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddRecordSheet.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddRecordSheet.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AddRecordSheet.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/AllNotesView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AllNotesView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AllNotesView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/AllNotesView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/ChartSections.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ChartSections.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ChartSections.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ChartSections.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/DashboardView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DashboardView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DashboardView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/DashboardView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/HealthMetricDetailView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetricDetailView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetricDetailView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/HealthMetricDetailView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/LatestMetricsGrid.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LatestMetricsGrid.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LatestMetricsGrid.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LatestMetricsGrid.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/LaunchScreenView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LaunchScreenView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LaunchScreenView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/LaunchScreenView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MedicalReferencesView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferencesView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferencesView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MedicalReferencesView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MetricCardView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricCardView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricCardView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricCardView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MetricsGridView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsGridView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsGridView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsGridView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MetricsHistoryView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MetricsHistoryViewModel.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryViewModel.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryViewModel.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MetricsHistoryViewModel.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/MinimalTrendLine.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MinimalTrendLine.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MinimalTrendLine.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/MinimalTrendLine.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/NoteDetailView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteDetailView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteDetailView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteDetailView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/NoteSummaryCard.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteSummaryCard.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteSummaryCard.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/NoteSummaryCard.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/ProfileEditView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileEditView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileEditView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileEditView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/ProfileView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ProfileView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/RecordRow.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordRow.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordRow.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordRow.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/RefreshControl.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshControl.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshControl.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshControl.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/RefreshableScrollView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshableScrollView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshableScrollView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RefreshableScrollView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/SingleMetricHistoryView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/SingleMetricHistoryView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/SingleMetricHistoryView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/SingleMetricHistoryView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/ValueInput.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ValueInput.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ValueInput.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/ValueInput.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/RecordH/Views/WelcomeView.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/WelcomeView.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/WelcomeView.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/WelcomeView.o"
+  },
+  "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

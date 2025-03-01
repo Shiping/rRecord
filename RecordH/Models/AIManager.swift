@@ -2,7 +2,6 @@ import Foundation
 import Combine
 
 import SwiftUI
-import RecordH // Import the PromptTemplate model
 
 @MainActor
 public final class AIManager: ObservableObject {

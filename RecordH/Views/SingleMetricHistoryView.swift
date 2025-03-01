@@ -74,7 +74,7 @@ struct SingleMetricHistoryView: View {
                     }
                 }
                 .padding()
-                .background(theme.secondaryBackgroundColor)
+                .background(theme.cardBackground)
                 .cornerRadius(10)
                 .padding(.horizontal)
                 
@@ -87,13 +87,11 @@ struct SingleMetricHistoryView: View {
                     ForEach(filteredRecords) { record in
                         RecordRow(record: record)
                             .padding(.vertical, 8)
-                            .background(theme.backgroundColor)
-                            .cornerRadius(8)
+                            .background(theme.cardBackground)
+                            .cornerRadius(10)
                     }
                 }
                 .padding()
-                .background(theme.secondaryBackgroundColor)
-                .cornerRadius(10)
                 .padding(.horizontal)
                 
                 // AI Analysis Section

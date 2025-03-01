@@ -41,7 +41,7 @@ struct ReferenceRow: View {
                     .font(.caption)
                     .foregroundColor(theme.secondaryTextColor)
                 
-                if let url = reference.url {
+                if reference.url != nil {
                     Spacer()
                     Button("查看来源") {
                         showingSafariView = true

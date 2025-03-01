@@ -92,68 +92,74 @@ struct DashboardView: View {
     }
     
     var body: some View {
+        let profileSection = NavigationLink(value: NavigationDestination.profile) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("个人设置")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                            if healthStore.userProfile != nil {
+                                Text("\(healthStore.userProfile?.gender.rawValue ?? "") · \(healthStore.userProfile?.age ?? 0)岁")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                    } else {
+                        Text("点击设置个人信息")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 12)
+                .fill(theme.cardBackground))
+        }
+        .padding(.horizontal)
+        
+        let metricsGrid = LatestMetricsGrid(
+            navigationPath: $navigationPath,
+            aiParameters: healthParameters
+        )
+        .environmentObject(healthStore)
+        
+        let aiAnalysisSection = VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("AI分析")
+                    .font(.headline)
+                Spacer()
+                NavigationLink(value: NavigationDestination.aiConfig) {
+                    Image(systemName: "gearshape")
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Button(action: {
+                showingAIChat = true
+            }) {
+                HStack {
+                    Text("点击生成AI分析")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.horizontal)
+        
         ScrollView {
             LazyVStack(spacing: 20) {
                 // Profile Section
-                NavigationLink(value: NavigationDestination.profile) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("个人设置")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            if let profile = healthStore.userProfile {
-                                Text("\(profile.gender.rawValue) · \(profile.age)岁")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("点击设置个人信息")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12)
-                        .fill(theme.cardBackground))
-                }
-                .padding(.horizontal)
+                profileSection
                 
                 // Metrics Grid
-                LatestMetricsGrid(
-                    navigationPath: $navigationPath,
-                    aiParameters: healthParameters
-                )
-                .environmentObject(healthStore)
+                metricsGrid
                 
                 // AI Analysis Section
                 if !healthParameters.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("AI分析")
-                                .font(.headline)
-                            Spacer()
-                            NavigationLink(value: NavigationDestination.aiConfig) {
-                                Image(systemName: "gearshape")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        Button(action: {
-                            showingAIChat = true
-                        }) {
-                            HStack {
-                                Text("点击生成AI分析")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
+                    aiAnalysisSection
                 }
             }
             .padding(.vertical)

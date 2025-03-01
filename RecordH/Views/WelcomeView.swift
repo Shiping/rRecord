@@ -191,8 +191,8 @@ struct WelcomeView: View {
                 }
                 
                 // Request HealthKit authorization with retry
-                try await healthStore.requestAccess()
-                
+                try? await healthStore.requestAccess()
+
                 // Refresh initial data
                 await healthStore.refreshData()
                 

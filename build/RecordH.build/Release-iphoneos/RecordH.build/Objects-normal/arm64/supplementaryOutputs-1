@@ -1,0 +1,9 @@
+"/Users/liushiping/test/hRecord_Release/RecordH/Models/AIConfiguration.swift":
+  swiftmodule: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftmodule"
+  abi-baseline-json: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.abi.json"
+  diagnostics: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.dia"
+  dependencies: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.d"
+  const-values: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-master.swiftconstvalues"
+  swiftdoc: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftdoc"
+  objc-header: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH-Swift.h"
+  swiftsourceinfo: "/Users/liushiping/test/hRecord_Release/build/RecordH.build/Release-iphoneos/RecordH.build/Objects-normal/arm64/RecordH.swiftsourceinfo"
