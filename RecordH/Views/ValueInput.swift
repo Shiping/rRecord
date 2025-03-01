@@ -1,9 +1,14 @@
 import SwiftUI
 
-struct ValueInput: View {
-    let metric: HealthMetric
-    @Binding var value: Double
+public struct ValueInput: View {
+    public let metric: HealthMetric
+    @Binding public var value: Double
     @Environment(\.theme) var theme
+    
+    public init(metric: HealthMetric, value: Binding<Double>) {
+        self.metric = metric
+        self._value = value
+    }
     
     private let formatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -13,7 +18,7 @@ struct ValueInput: View {
         return formatter
     }()
     
-    var body: some View {
+    public var body: some View {
         HStack {
             TextField("输入\(metric.name)", value: $value, formatter: formatter)
                 .keyboardType(.decimalPad)
@@ -27,10 +32,10 @@ struct ValueInput: View {
     }
 }
 
-struct ValueInputWithValidation: View {
-    let metric: HealthMetric
-    @Binding var value: Double
-    @Binding var isValid: Bool
+public struct ValueInputWithValidation: View {
+    public let metric: HealthMetric
+    @Binding public var value: Double
+    @Binding public var isValid: Bool
     @Environment(\.theme) var theme
     
     private var range: ClosedRange<Double> {
@@ -66,13 +71,13 @@ struct ValueInputWithValidation: View {
         }
     }
     
-    init(metric: HealthMetric, value: Binding<Double>, isValid: Binding<Bool>) {
+    public init(metric: HealthMetric, value: Binding<Double>, isValid: Binding<Bool>) {
         self.metric = metric
         self._value = value
         self._isValid = isValid
     }
     
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 4) {
             ValueInput(metric: metric, value: $value)
             
