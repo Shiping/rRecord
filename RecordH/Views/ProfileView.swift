@@ -60,7 +60,7 @@ struct ProfileView: View {
                     }
                 }
                 
-                NavigationLink(destination: MedicalReferencesView( metric: <#HealthMetric?#>)) {
+                NavigationLink(destination: MedicalReferencesView(metric: nil)) {
                     HStack {
                         Image(systemName: "cross.case")
                         Text("医学参考")

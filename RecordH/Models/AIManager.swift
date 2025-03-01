@@ -1,6 +1,9 @@
 import Foundation
 import Combine
 
+import SwiftUI
+import RecordH // Import the PromptTemplate model
+
 @MainActor
 public final class AIManager: ObservableObject {
     @MainActor
@@ -14,13 +17,59 @@ public final class AIManager: ObservableObject {
     
     private let configurationManager: AIConfigurationManager
     @Published public private(set) var isProcessing = false
+    @Published public var templates: [PromptTemplate] = []
     
     private init() {
         self.configurationManager = AIConfigurationManager.shared
     }
     
     private func initialize() async {
-        // Instance is fully initialized here
+        // Load templates from UserDefaults or set default templates
+        if let savedTemplates = UserDefaults.standard.data(forKey: "promptTemplates"),
+           let decoded = try? JSONDecoder().decode([PromptTemplate].self, from: savedTemplates) {
+            self.templates = decoded
+        } else {
+            // Set default templates if none exist
+            self.templates = [
+                PromptTemplate(
+                    name: "健康状况分析",
+                    description: "分析健康指标的变化趋势和潜在影响",
+                    template: """
+                    请分析以下健康数据的变化趋势和可能的健康影响：
+
+                    {metrics}
+
+                    请提供专业的分析和建议。
+                    """,
+                    applicableMetrics: HealthMetric.allCases,
+                    isDefault: true
+                )
+            ]
+            saveTemplates()
+        }
+    }
+    
+    private func saveTemplates() {
+        if let encoded = try? JSONEncoder().encode(templates) {
+            UserDefaults.standard.set(encoded, forKey: "promptTemplates")
+        }
+    }
+    
+    public func addTemplate(_ template: PromptTemplate) {
+        templates.append(template)
+        saveTemplates()
+    }
+    
+    public func updateTemplate(_ template: PromptTemplate) {
+        if let index = templates.firstIndex(where: { $0.id == template.id }) {
+            templates[index] = template
+            saveTemplates()
+        }
+    }
+    
+    public func deleteTemplate(_ template: PromptTemplate) {
+        templates.removeAll { $0.id == template.id }
+        saveTemplates()
     }
     
     public func sendMessage(_ message: String) async throws -> String {

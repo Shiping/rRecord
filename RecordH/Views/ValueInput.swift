@@ -1,9 +1,10 @@
 import SwiftUI
+import UIKit
 
 public struct ValueInput: View {
     public let metric: HealthMetric
     @Binding public var value: Double
-    @Environment(\.theme) var theme
+    @Environment(\.theme) public var theme
     
     public init(metric: HealthMetric, value: Binding<Double>) {
         self.metric = metric
@@ -36,7 +37,7 @@ public struct ValueInputWithValidation: View {
     public let metric: HealthMetric
     @Binding public var value: Double
     @Binding public var isValid: Bool
-    @Environment(\.theme) var theme
+    @Environment(\.theme) public var theme
     
     private var range: ClosedRange<Double> {
         switch metric {

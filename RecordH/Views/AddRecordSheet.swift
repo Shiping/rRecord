@@ -2,19 +2,25 @@ import SwiftUI
 import HealthKit
 import UIKit
 
-struct AddRecordSheet: View {
+public struct AddRecordSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) var theme
     @EnvironmentObject var healthStore: HealthStore
     
-    let metric: HealthMetric
+    public let metric: HealthMetric
+    
+    // State variables
     @State private var value: Double = 0.0
     @State private var isValid: Bool = true
     @State private var date = Date()
     @State private var showingError = false
     @State private var errorMessage = ""
     
-    var body: some View {
+    public init(metric: HealthMetric) {
+        self.metric = metric
+    }
+    
+    public var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {

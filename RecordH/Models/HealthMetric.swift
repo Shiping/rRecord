@@ -1,7 +1,7 @@
 import Foundation
 import HealthKit
 
-public enum HealthMetric: String, Codable, CaseIterable, Sendable {
+public enum HealthMetric: String, Codable, CaseIterable, Sendable, Hashable {
     case bmi = "BMI"
     case bodyMass = "体重"
     case bodyFat = "体脂率"

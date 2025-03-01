@@ -1,14 +1,5 @@
 import SwiftUI
-
-struct PromptTemplate: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var description: String
-    var template: String
-    var applicableMetrics: [HealthMetric]
-    var isDefault: Bool
-}
-
+import Foundation
 struct AIPromptTemplates: View {
     @EnvironmentObject private var aiManager: AIManager
     @State private var showingAddTemplate = false
